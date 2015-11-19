@@ -1,3 +1,5 @@
+#!/bin/sh
+
 module add matlab-8.6
 module add python-2.7.6-gcc
 module add python27-modules-gcc
