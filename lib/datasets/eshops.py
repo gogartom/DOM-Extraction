@@ -23,7 +23,8 @@ class eshops(datasets.imdb):
     def __init__(self, image_set, data_path=None):
         datasets.imdb.__init__(self, 'eshops')
         self._image_set = image_set
-        self._data_path = os.path.join('/storage', 'plzen1', 'home', 'gogartom', 'DOM-extraction', 'data', 'eshops')
+        #self._data_path = os.path.join('/storage', 'plzen1', 'home', 'gogartom', 'DOM-extraction', 'data', 'eshops')
+        self._data_path = os.path.join('..', '..', 'data', 'eshops')
         self._classes = ('__background__', 'price', 'main_image', 'name')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpeg'
@@ -80,9 +81,9 @@ class eshops(datasets.imdb):
             return roidb
 
         gt_roidb = [self._load_annotation(index) for index in self.image_index]
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+        #with open(cache_file, 'wb') as fid:
+            #cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        #print 'wrote gt roidb to {}'.format(cache_file)
 
         return gt_roidb
 
@@ -107,27 +108,46 @@ class eshops(datasets.imdb):
             roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+        #with open(cache_file, 'wb') as fid:
+            #cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        #print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
 
-	#TODO
     def _load_selective_search_roidb(self, gt_roidb):
-        filename = os.path.absolute(os.path.join(self.data_path, 'selective_search_data', self.name + '.mat'))
-        #assert os.path.exists(filename), 'Selective search data not found at: {}'.format(filename)
+        box_list = []
+        for index in self.image_index:
+            filename = os.path.join(self._data_path, 'annotations', index + '.json')
+            with open(filename) as data:    
+                annotation = json.load(data)
+                objs = annotation['typedObjects']
+                num_objs = len(objs)
+
+                boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+
+                # Load object bounding boxes into a data frame.
+                for ix, obj in enumerate(objs):
+                    if obj['type'] not in self._class_to_ind:
+                        x1, y1, x2, y2 = obj['boundingBox']
+                        boxes[ix, :] = [x1, y1, x2, y2]
+                box_list.append(boxes)
+
+        '''
+        filename = os.path.join(self._data_path, '..', 'selective_search_data', self.name + '.mat')
+        assert os.path.exists(filename), 'Selective search data not found at: {}'.format(filename)
+
         raw_data = sio.loadmat(filename)['boxes'].ravel()
 
         box_list = []
         for i in xrange(raw_data.shape[0]):
             box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
 
-        print box_list[0]
+        print box_list[10]
+        '''
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-	#TODO
+	#TODO REMOVE?
     def selective_search_IJCV_roidb(self):
         """
         Return the database of selective search regions of interest.
@@ -135,9 +155,7 @@ class eshops(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path,
-                '{:s}_selective_search_IJCV_top_{:d}_roidb.pkl'.
-                format(self.name, self.config['top_k']))
+        cache_file = os.path.join(self.cache_path, '{:s}_selective_search_IJCV_top_{:d}_roidb.pkl'. format(self.name, self.config['top_k']))
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
@@ -154,7 +172,7 @@ class eshops(datasets.imdb):
 
         return roidb
 
-	#TODO
+	#TODO REMOVE?
     def _load_selective_search_IJCV_roidb(self, gt_roidb):
         IJCV_path = os.path.abspath(os.path.join(self.cache_path, '..', 'selective_search_IJCV_data', 'voc_' + self._year))
         assert os.path.exists(IJCV_path), 'Selective search IJCV data not found at: {}'.format(IJCV_path)
@@ -189,9 +207,9 @@ class eshops(datasets.imdb):
                 if obj['type'] not in self._class_to_ind:
                     continue
                 cls = self._class_to_ind[obj['type']]
-                print '{}'.format(obj['boundingBox'])
-                #x1, y1, x2, y2 = *obj['boundingBox']
-                #boxes[ix, :] = [x1, y1, x2, y2]
+                #print '{}'.format(obj['boundingBox'])
+                x1, y1, x2, y2 = obj['boundingBox']
+                boxes[ix, :] = [x1, y1, x2, y2]
                 gt_classes[ix] = cls
                 overlaps[ix, cls] = 1.0
 
@@ -250,8 +268,6 @@ class eshops(datasets.imdb):
 
 if __name__ == '__main__':
     d = datasets.eshops('all')
-    print d._class_to_ind 
-    print d._image_index 
     d._load_annotation('xaa-433')
     res = d.roidb
     #from IPython import embed; embed()
