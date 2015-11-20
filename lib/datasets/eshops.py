@@ -17,6 +17,7 @@ import utils.cython_bbox
 import cPickle
 import subprocess
 import json
+import math
 
 class eshops(datasets.imdb):
 
@@ -45,7 +46,7 @@ class eshops(datasets.imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, 'images', index + self._image_ext)
+        image_path = os.path.abspath(os.path.join(self._data_path, 'images', index + self._image_ext))
         assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
 
@@ -128,7 +129,7 @@ class eshops(datasets.imdb):
                 # Load object bounding boxes into a data frame.
                 for ix, obj in enumerate(objs):
                     if obj['type'] not in self._class_to_ind:
-                        x1, y1, x2, y2 = obj['boundingBox']
+                        x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
                         boxes[ix, :] = [x1, y1, x2, y2]
                 box_list.append(boxes)
 
@@ -208,7 +209,7 @@ class eshops(datasets.imdb):
                     continue
                 cls = self._class_to_ind[obj['type']]
                 #print '{}'.format(obj['boundingBox'])
-                x1, y1, x2, y2 = obj['boundingBox']
+                x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
                 boxes[ix, :] = [x1, y1, x2, y2]
                 gt_classes[ix] = cls
                 overlaps[ix, cls] = 1.0
@@ -268,6 +269,7 @@ class eshops(datasets.imdb):
 
 if __name__ == '__main__':
     d = datasets.eshops('all')
-    d._load_annotation('xaa-433')
-    res = d.roidb
+    #d._load_annotation('xaa-433')
+    print d.image_path_from_index('xaa-433')
+    #res = d.roidb
     #from IPython import embed; embed()
