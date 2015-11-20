@@ -25,7 +25,9 @@ class eshops(datasets.imdb):
         datasets.imdb.__init__(self, 'eshops')
         self._image_set = image_set
         #self._data_path = os.path.join('/storage', 'plzen1', 'home', 'gogartom', 'DOM-extraction', 'data', 'eshops')
-        self._data_path = os.path.join('..', '..', 'data', 'eshops')
+        #self._data_path = os.path.join('..', '..', 'data', 'eshops')
+        #self._data_path = os.path.join('..', '..', 'data', 'new_eshops')
+        self._data_path = os.path.join(datasets.ROOT_DIR, 'data', 'new_eshops')
         self._classes = ('__background__', 'price', 'main_image', 'name')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpeg'
@@ -268,8 +270,9 @@ class eshops(datasets.imdb):
         self._do_matlab_eval(comp_id, output_dir)
 
 if __name__ == '__main__':
-    d = datasets.eshops('all')
+    #d = datasets.eshops('all')
+    d = datasets.eshops('alza')
     #d._load_annotation('xaa-433')
-    print d.image_path_from_index('xaa-433')
-    #res = d.roidb
+    #print d.image_path_from_index('xaa-433')
+    res = d.roidb
     #from IPython import embed; embed()
