@@ -117,23 +117,24 @@ class eshops(datasets.imdb):
 
         return roidb
 
+    #TODO DEBUG
     def _load_selective_search_roidb(self, gt_roidb):
         box_list = []
         for index in self.image_index:
             filename = os.path.join(self._data_path, 'annotations', index + '.json')
             with open(filename) as data:    
                 annotation = json.load(data)
-                objs = annotation['typedObjects']
+                objs = annotation['visibleBB']
                 num_objs = len(objs)
-
                 boxes = np.zeros((num_objs, 4), dtype=np.uint16)
 
                 # Load object bounding boxes into a data frame.
                 for ix, obj in enumerate(objs):
-                    if obj['type'] not in self._class_to_ind:
-                        x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
-                        boxes[ix, :] = [x1, y1, x2, y2]
+                    x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj]
+                    boxes[ix, :] = [x1, y1, x2, y2]
                 box_list.append(boxes)
+
+        print boxes
 
         '''
         filename = os.path.join(self._data_path, '..', 'selective_search_data', self.name + '.mat')
@@ -189,6 +190,7 @@ class eshops(datasets.imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
+    #TODO DEBUG
     def _load_annotation(self, index):
         """
         Load image and bounding boxes info from XML file in the PASCAL VOC
@@ -201,22 +203,26 @@ class eshops(datasets.imdb):
             objs = annotation['typedObjects']
             num_objs = len(objs)
 
-            boxes = np.zeros((num_objs, 4), dtype=np.uint16)
-            gt_classes = np.zeros((num_objs), dtype=np.int32)
-            overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+            boxes = np.zeros((self.num_classes-1, 4), dtype=np.uint16)
+            gt_classes = np.zeros((self.num_classes-1), dtype=np.int32)
+            overlaps = np.zeros((self.num_classes-1, self.num_classes), dtype=np.float32)
 
             # Load object bounding boxes into a data frame.
-            for ix, obj in enumerate(objs):
+            loaded = 0
+            for obj in objs:
                 if obj['type'] not in self._class_to_ind:
                     continue
                 cls = self._class_to_ind[obj['type']]
                 #print '{}'.format(obj['boundingBox'])
                 x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
-                boxes[ix, :] = [x1, y1, x2, y2]
-                gt_classes[ix] = cls
-                overlaps[ix, cls] = 1.0
+                boxes[loaded, :] = [x1, y1, x2, y2]
+                gt_classes[loaded] = cls
+                overlaps[loaded, cls] = 1.0
+                loaded += 1
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
+
+            print boxes
 
             return {'boxes' : boxes,
                     'gt_classes': gt_classes,
@@ -270,8 +276,8 @@ class eshops(datasets.imdb):
         self._do_matlab_eval(comp_id, output_dir)
 
 if __name__ == '__main__':
-    #d = datasets.eshops('all')
-    d = datasets.eshops('alza')
+    d = datasets.eshops('all')
+    #d = datasets.eshops('alza')
     #d._load_annotation('xaa-433')
     #print d.image_path_from_index('xaa-433')
     res = d.roidb
