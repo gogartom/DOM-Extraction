@@ -130,11 +130,11 @@ class eshops(datasets.imdb):
 
                 # Load object bounding boxes into a data frame.
                 for ix, obj in enumerate(objs):
-                    x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj]
+                    x1, y1, x2, y2 = [int(math.ceil(x))-1 for x in obj]
                     boxes[ix, :] = [x1, y1, x2, y2]
                 box_list.append(boxes)
 
-        print boxes
+        #print boxes
 
         '''
         filename = os.path.join(self._data_path, '..', 'selective_search_data', self.name + '.mat')
@@ -214,7 +214,7 @@ class eshops(datasets.imdb):
                     continue
                 cls = self._class_to_ind[obj['type']]
                 #print '{}'.format(obj['boundingBox'])
-                x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
+                x1, y1, x2, y2 = [int(math.ceil(x))-1 for x in obj['boundingBox']]
                 boxes[loaded, :] = [x1, y1, x2, y2]
                 gt_classes[loaded] = cls
                 overlaps[loaded, cls] = 1.0
@@ -222,7 +222,7 @@ class eshops(datasets.imdb):
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
 
-            print boxes
+            #print boxes
 
             return {'boxes' : boxes,
                     'gt_classes': gt_classes,
