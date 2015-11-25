@@ -130,9 +130,11 @@ class eshops(datasets.imdb):
 
                 # Load object bounding boxes into a data frame.
                 for ix, obj in enumerate(objs):
-                    x1, y1, x2, y2 = [int(math.ceil(x))-1 for x in obj]
-                    boxes[ix, :] = [x1, y1, x2, y2]
+                    x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj]
+                    boxes[ix, :] = [x1, y1, x2-1, y2-1]
                 box_list.append(boxes)
+            #if index == 'alza-000003':
+                #print boxes
 
         #print boxes
 
@@ -213,9 +215,8 @@ class eshops(datasets.imdb):
                 if obj['type'] not in self._class_to_ind:
                     continue
                 cls = self._class_to_ind[obj['type']]
-                #print '{}'.format(obj['boundingBox'])
-                x1, y1, x2, y2 = [int(math.ceil(x))-1 for x in obj['boundingBox']]
-                boxes[loaded, :] = [x1, y1, x2, y2]
+                x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj['boundingBox']]
+                boxes[loaded, :] = [x1, y1, x2-1, y2-1]
                 gt_classes[loaded] = cls
                 overlaps[loaded, cls] = 1.0
                 loaded += 1
@@ -276,8 +277,8 @@ class eshops(datasets.imdb):
         self._do_matlab_eval(comp_id, output_dir)
 
 if __name__ == '__main__':
-    d = datasets.eshops('all')
-    #d = datasets.eshops('alza')
+    #d = datasets.eshops('all')
+    d = datasets.eshops('alza_first')
     #d._load_annotation('xaa-433')
     #print d.image_path_from_index('xaa-433')
     res = d.roidb
