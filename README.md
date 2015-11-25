@@ -2,6 +2,11 @@
 
 Created by Ross Girshick at Microsoft Research, Redmond.
 
+### TODO
+ - Javascript should check BBs, it should not return boxes bigger than image!
+
+
+
 ### Introduction
 
 **Fast R-CNN** is a fast framework for object detection with deep ConvNets. Fast R-CNN
