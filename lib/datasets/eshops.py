@@ -24,9 +24,6 @@ class eshops(datasets.imdb):
     def __init__(self, image_set, data_path=None):
         datasets.imdb.__init__(self, 'eshops')
         self._image_set = image_set
-        #self._data_path = os.path.join('/storage', 'plzen1', 'home', 'gogartom', 'DOM-extraction', 'data', 'eshops')
-        #self._data_path = os.path.join('..', '..', 'data', 'eshops')
-        #self._data_path = os.path.join('..', '..', 'data', 'new_eshops')
         self._data_path = os.path.join(datasets.ROOT_DIR, 'data', 'new_eshops')
         self._classes = ('__background__', 'price', 'main_image', 'name')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
@@ -76,17 +73,17 @@ class eshops(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self._image_set + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+            print '{} gt roidb loaded from {}'.format(self._image_set, cache_file)
             return roidb
 
         gt_roidb = [self._load_annotation(index) for index in self.image_index]
-        #with open(cache_file, 'wb') as fid:
-            #cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        #print 'wrote gt roidb to {}'.format(cache_file)
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote gt roidb to {}'.format(cache_file)
 
         return gt_roidb
 
@@ -97,12 +94,12 @@ class eshops(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_selective_search_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self._image_set + '_roidb.pkl')
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+            print '{} ss roidb loaded from {}'.format(self._image_set, cache_file)
             return roidb
 
         if self._image_set != 'test':
@@ -111,13 +108,12 @@ class eshops(datasets.imdb):
             roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
-        #with open(cache_file, 'wb') as fid:
-            #cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        #print 'wrote ss roidb to {}'.format(cache_file)
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
 
-    #TODO DEBUG
     def _load_selective_search_roidb(self, gt_roidb):
         box_list = []
         for index in self.image_index:
@@ -133,23 +129,6 @@ class eshops(datasets.imdb):
                     x1, y1, x2, y2 = [int(math.ceil(x)) for x in obj]
                     boxes[ix, :] = [x1, y1, x2-1, y2-1]
                 box_list.append(boxes)
-            #if index == 'alza-000003':
-                #print boxes
-
-        #print boxes
-
-        '''
-        filename = os.path.join(self._data_path, '..', 'selective_search_data', self.name + '.mat')
-        assert os.path.exists(filename), 'Selective search data not found at: {}'.format(filename)
-
-        raw_data = sio.loadmat(filename)['boxes'].ravel()
-
-        box_list = []
-        for i in xrange(raw_data.shape[0]):
-            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
-
-        print box_list[10]
-        '''
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -192,7 +171,6 @@ class eshops(datasets.imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-    #TODO DEBUG
     def _load_annotation(self, index):
         """
         Load image and bounding boxes info from XML file in the PASCAL VOC
@@ -232,13 +210,14 @@ class eshops(datasets.imdb):
 
 	#TODO
     def _write_voc_results_file(self, all_boxes):
-        use_salt = self.config['use_salt']
+        #use_salt = self.config['use_salt']
+        use_salt = False
         comp_id = 'comp4'
         if use_salt:
             comp_id += '-{}'.format(os.getpid())
 
         # VOCdevkit/results/VOC2007/Main/comp4-44503_det_test_aeroplane.txt
-        path = os.path.join(self._devkit_path, 'results', 'VOC' + self._year, 'Main', comp_id + '_')
+        path = os.path.join(self._data_path, comp_id + '_')
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
@@ -259,26 +238,26 @@ class eshops(datasets.imdb):
 
 	#TODO
     def _do_matlab_eval(self, comp_id, output_dir='output'):
-        rm_results = self.config['cleanup']
+        #rm_results = self.config['cleanup']
+        rm_results = False
 
         path = os.path.join(os.path.dirname(__file__), 'VOCdevkit-matlab-wrapper')
         cmd = 'cd {} && '.format(path)
         cmd += '{:s} -nodisplay -nodesktop '.format(datasets.MATLAB)
         cmd += '-r "dbstop if error; '
         cmd += 'voc_eval(\'{:s}\',\'{:s}\',\'{:s}\',\'{:s}\',{:d}); quit;"' \
-               .format(self._devkit_path, comp_id,
+               .format(self._data_path, comp_id,
                        self._image_set, output_dir, int(rm_results))
         print('Running:\n{}'.format(cmd))
-        status = subprocess.call(cmd, shell=True)
+        #status = subprocess.call(cmd, shell=True)
 
-	#TODO
     def evaluate_detections(self, all_boxes, output_dir):
         comp_id = self._write_voc_results_file(all_boxes)
-        self._do_matlab_eval(comp_id, output_dir)
+        #self._do_matlab_eval(comp_id, output_dir)
 
 if __name__ == '__main__':
     #d = datasets.eshops('all')
-    d = datasets.eshops('alza_first')
+    d = datasets.eshops('alza_test')
     #d._load_annotation('xaa-433')
     #print d.image_path_from_index('xaa-433')
     res = d.roidb

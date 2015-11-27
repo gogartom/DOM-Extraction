@@ -38,18 +38,18 @@ def parse_args():
     parser.add_argument('--weights', dest='pretrained_model',
                         help='initialize with pretrained model weights',
                         default=None, type=str)
-#    parser.add_argument('--cfg', dest='cfg_file',
-#                        help='optional config file',
-#                        default=None, type=str)
+    parser.add_argument('--cfg', dest='cfg_file',
+                        help='optional config file',
+                        default=None, type=str)
 #    parser.add_argument('--imdb', dest='imdb_name',
 #                        help='dataset to train on',
 #                        default='voc_2007_trainval', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
-#    parser.add_argument('--set', dest='set_cfgs',
-#                        help='set config keys', default=None,
-#                        nargs=argparse.REMAINDER)
+    parser.add_argument('--set', dest='set_cfgs',
+                        help='set config keys', default=None,
+                        nargs=argparse.REMAINDER)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -64,13 +64,13 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
- #   if args.cfg_file is not None:
- #       cfg_from_file(args.cfg_file)
- #   if args.set_cfgs is not None:
- #       cfg_from_list(args.set_cfgs)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+    if args.set_cfgs is not None:
+        cfg_from_list(args.set_cfgs)
 
- #   print('Using config:')
- #   pprint.pprint(cfg)
+    print('Using config:')
+    pprint.pprint(cfg)
 
     if not args.randomize:
         # fix the random seeds (numpy and caffe) for reproducibility
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     if args.gpu_id is not None:
         caffe.set_device(args.gpu_id)
 
-    imdb = datasets.eshops('alza_first')
+    imdb = datasets.eshops('alza_train')
     roidb = imdb.roidb
 
 #    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
