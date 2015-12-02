@@ -76,8 +76,10 @@ if __name__ == '__main__':
     net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)
     net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
 
+    imdb = datasets.eshops(args.imdb_name)
     #imdb = get_imdb(args.imdb_name)
-    imdb = datasets.eshops('alza_test')
+    #imdb = datasets.eshops('alza_test')
+    #imdb = datasets.eshops('czc100')
     imdb.competition_mode(args.comp_mode)
 
     test_net(net, imdb)

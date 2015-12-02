@@ -41,9 +41,9 @@ def parse_args():
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
-#    parser.add_argument('--imdb', dest='imdb_name',
-#                        help='dataset to train on',
-#                        default='voc_2007_trainval', type=str)
+    parser.add_argument('--imdb', dest='imdb_name',
+                        help='dataset to train on',
+                        default='alza_train', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -82,7 +82,9 @@ if __name__ == '__main__':
     if args.gpu_id is not None:
         caffe.set_device(args.gpu_id)
 
-    imdb = datasets.eshops('alza_train')
+    
+    imdb = datasets.eshops(args.imdb_name)
+    #imdb = datasets.eshops('alza_train')
     roidb = imdb.roidb
 
 #    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
