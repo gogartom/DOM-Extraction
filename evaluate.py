@@ -1,67 +1,57 @@
 import sys
 import cPickle
 import numpy
+import json
+import datasets
 
 
 def area(box):
-    return (box[2]-box[0]) * (box[3]-box[1])
+    return (int(box[2])-int(box[0])) * (int(box[3])-int(box[1]))
 
 def calculate_iou(box1, box2):
     axmin, aymin, axmax, aymax = box1
     bxmin, bymin, bxmax, bymax = box2
-    #print axmin, aymin, axmax, aymax 
-    #print bxmin, bymin, bxmax, bymax 
-    dx = min(axmax, bxmax) - max(axmin, bxmin)
-    dy = min(aymax, bymax) - max(aymin, bymin)
+    dx = int(min(axmax, bxmax)) - int(max(axmin, bxmin))
+    dy = int(min(aymax, bymax)) - int(max(aymin, bymin))
     S12 = max(dx*dy, 0)
     S1 = area(box1)
     S2 = area(box2)
-    #print S12, S1, S2
-    iou = (S12*1.0)/(S1+S2-S12)
+    iou = (S12*1.0)/(S1+S2-S12+0.00000000001)
     return iou
 
-gt_file = sys.argv[1]
+imdb = sys.argv[1]
+run = sys.argv[2]
 
-titles = sys.argv[2]
-prices = sys.argv[3]
-images = sys.argv[4]
+d = datasets.eshops(imdb)
 
-with open(gt_file, 'rb') as fid:
-    gt_roidb = cPickle.load(fid)
-
-gt = []
-for k in gt_roidb:
-    gt.append(k['boxes'])
+gt = {}
+for index in d._image_index:
+    gt[index] = d._load_annotation(index)['boxes']
 
 n = len(gt)
 
-IOU_THRESHOLD = 0.85
 
-correct = 0
-with open(titles, 'r') as f:
-    for idx, line in enumerate(f):
-        box = [int(float(x)) for x in line.split()[2:]]
-        IOU = calculate_iou(gt[idx][0], box)
-        if IOU > IOU_THRESHOLD:
-            correct += 1
+classes = ('name', 'price', 'main_image')
 
-print 'Title accuracy: ', correct/(n*1.0)
+IOU_THRESHOLD = 0.3
 
-correct = 0
-with open(prices, 'r') as f:
-    for idx, line in enumerate(f):
-        box = [int(float(x)) for x in line.split()[2:]]
-        IOU = calculate_iou(gt[idx][1], box)
-        if IOU > IOU_THRESHOLD:
-            correct += 1
+for i,cls in enumerate(classes):
+    correct = 0
+    filename = 'data/eshops/results/' + imdb + '_' + cls + '-' + run + '.txt'
+    with open(filename, 'r') as f:
+        prev = ''
+        for line in f:
+            index = line.split()[0]
+            if index == prev:
+                continue
+            box1 = [int(float(x)) for x in line.split()[2:]]
+            box2 = gt[index][i]
+            IOU = calculate_iou(box1, box2)
+            if IOU > IOU_THRESHOLD:
+                print box2, box1
+                correct += 1
+            prev = index
 
-print 'Price accuracy: ', correct/(n*1.0)
+    print cls, 'accuracy: ', correct/(n*1.0)
 
-correct = 0
-with open(images, 'r') as f:
-    for idx, line in enumerate(f):
-        box = [int(float(x)) for x in line.split()[2:]]
-        IOU = calculate_iou(gt[idx][1], box)
-        if IOU > IOU_THRESHOLD:
-            correct += 1
-print 'Image accuracy: ', correct/(n*1.0)
+
