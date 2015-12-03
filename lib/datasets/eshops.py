@@ -178,7 +178,7 @@ class eshops(datasets.imdb):
             if cls == '__background__':
                 continue
             print 'Writing {} results file'.format(cls)
-            filename = os.path.join(path, self._image_set + comp_id + '.txt')
+            filename = os.path.join(path, self._image_set + '_' + cls + comp_id + '.txt')
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
