@@ -183,7 +183,8 @@ class eshops(datasets.imdb):
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
-                        continue
+                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, 0, 0, 0, 0, 0))
+                        continue 
                     for k in xrange(dets.shape[0]):
                         f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
                                 format(index, dets[k, -1],
@@ -201,4 +202,5 @@ if __name__ == '__main__':
     #d._load_annotation('xaa-433')
     #print d.image_path_from_index('xaa-433')
     res = d.roidb
+    print res
     #from IPython import embed; embed()
