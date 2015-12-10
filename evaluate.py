@@ -31,13 +31,21 @@ gt = [ x['boxes'].tolist() for x in d.gt_roidb()]
 
 n = len(gt)
 
-
 classes = ('name', 'price', 'main_image')
 
-IOU_THRESHOLD = 1
+IOU_THRESHOLD = 0.5
+
+correct = {}
+img_cnt = {}
+
+for cls in classes:
+    correct[cls] = {}
+    correct[cls]['total'] = 0
+    img_cnt[cls] = {}
+    img_cnt[cls]['total'] = 0
 
 for i,cls in enumerate(classes):
-    correct = 0
+    #c = 0
     filename = 'data/eshops/results/' + imdb + '_' + cls + '-' + run + '.txt'
     with open(filename, 'r') as f:
         prev = ''
@@ -46,20 +54,27 @@ for i,cls in enumerate(classes):
             index = line.split()[0]
             if index == prev:
                 continue
+            shop = ''.join(index.split('-')[:-1])
+            if shop not in correct[cls]:
+                correct[cls][shop] = 0
+                img_cnt[cls][shop] = 0
+
             box1 = [int(float(x)) for x in line.split()[2:]]
             box2 = gt[idx][i] 
-            '''
-            box3 = gt[index][i]
-            for j in range(len(box2)):
-                if box2[j] != box3[j]:
-                    print idx+1, index, cls
-                    print box2, box3
-            '''
             IOU = calculate_iou(box1, box2)
             if IOU >= IOU_THRESHOLD:
-                correct += 1
+                correct[cls]['total'] += 1
+                correct[cls][shop] += 1
+                #c += 1
             prev = index
             idx += 1
 
-    print cls, 'accuracy: ', correct/(n*1.0)
+            img_cnt[cls]['total'] += 1
+            img_cnt[cls][shop] += 1
+
+    for shop in correct[cls]:
+        print shop, cls, 'accuracy: ', correct[cls][shop]/(img_cnt[cls][shop]*1.0)
+    print ''
+    #print cls, 'accuracy: ', correct[cls]['total']/(img_cnt[cls]['total']*1.0)
+    #print cls, 'accuracy: ', c/(n*1.0)
 
