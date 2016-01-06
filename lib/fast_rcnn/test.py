@@ -31,7 +31,10 @@ def _get_image_blob(im):
             in the image pyramid
     """
     im_orig = im.astype(np.float32, copy=True)
-    im_orig -= cfg.PIXEL_MEANS
+    if cfg.COLOR_MODE > 0:
+        im_orig -= cfg.PIXEL_MEANS
+    else:
+        im_orig -= 116.5090652
 
     im_shape = im_orig.shape
     im_size_min = np.min(im_shape[0:2])
@@ -49,6 +52,8 @@ def _get_image_blob(im):
                         interpolation=cv2.INTER_LINEAR)
         im_scale_factors.append(im_scale)
         processed_ims.append(im)
+        #cv2.imwrite('resized.jpeg',im)
+        
 
     # Create a blob to hold the input images
     blob = im_list_to_blob(processed_ims)
@@ -274,7 +279,7 @@ def test_net(net, imdb):
 
     roidb = imdb.roidb
     for i in xrange(num_images):
-        im = cv2.imread(imdb.image_path_at(i))
+        im = cv2.imread(imdb.image_path_at(i), cfg.COLOR_MODE)
         _t['im_detect'].tic()
         scores, boxes = im_detect(net, im, roidb[i]['boxes'])
         _t['im_detect'].toc()
