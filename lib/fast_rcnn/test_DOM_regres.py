@@ -282,23 +282,33 @@ def test_net(net, imdb, imdb_name):
     for i in xrange(num_images):
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
+	    #-- get boxes from network
+        dim_w = 1920-1
+        dim_h = 1080-1
+        w = 800
+        h = 600
+        proposals = []
+        for x0 in np.linspace(0, dim_w-w, num = 3):
+            for y0 in np.linspace(0, dim_h-h, num = 2):
+                proposals.append([x0, y0, x0+w, y0+h])
+        #boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
+        boxes = im_detect(net, im, np.array(proposals))
 
-	#-- get boxes from network
-        boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
-	print boxes
+	#print boxes
 
 	#-- show in image
 	plt.imshow(im)
 
 	rects = []		
-	for j in xrange(1,4):
-	    bbox = boxes[0,j*4:j*4+4]
-	    rect = plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0],
-                          bbox[3] - bbox[1], fill=False,
-                          edgecolor='r', linewidth=3)
-	   
+    for i in xrange(len(boxes)):
+        for j in xrange(1,4):
+            bbox = boxes[i,j*4:j*4+4]
+            rect = plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0],
+                            bbox[3] - bbox[1], fill=False,
+                            edgecolor='r', linewidth=3)
+        
             rects.append(rect)
-	    plt.gca().add_patch(rect)
+            plt.gca().add_patch(rect)
 
 	plt.savefig(images_dir+'/im_'+str(i)+'.png')
       
