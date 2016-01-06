@@ -78,6 +78,7 @@ __C.TRAIN.SNAPSHOT_INFIX = ''
 # So far I haven't found this useful; likely more engineering work is required
 __C.TRAIN.USE_PREFETCH = False
 
+
 #
 # Testing options
 #
@@ -128,6 +129,11 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 
 # Place outputs under an experiments directory
 __C.EXP_DIR = 'default'
+
+# CV_LOAD_IMAGE_UNCHANGED (<0) loads the image as is (including the alpha channel if present)
+# CV_LOAD_IMAGE_GRAYSCALE ( 0) loads the image as an intensity one
+# CV_LOAD_IMAGE_COLOR (>0) loads the image in the BGR format
+__C.COLOR_MODE = 1
 
 def get_output_dir(imdb, net):
     """Return the directory where experimental artifacts are placed.
