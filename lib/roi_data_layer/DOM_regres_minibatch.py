@@ -146,13 +146,14 @@ def _get_image_blob(roidb, scale_inds):
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
 
-        # Change hue randomly
-        hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
-        add_value = np.random.randint(low=0,high=180,size=1)[0]
-        add_matrix = np.ones(hsv.shape[0:2])*add_value
-        hsv2 = hsv
-        hsv2[:,:,0] += add_matrix
-        im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
+        if cfg.TRAIN.CHANGE_HUE:
+            # Change hue randomly
+            hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
+            add_value = np.random.randint(low=0,high=180,size=1)[0]
+            add_matrix = np.ones(hsv.shape[0:2])*add_value
+            hsv2 = hsv
+            hsv2[:,:,0] += add_matrix
+            im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
 
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]

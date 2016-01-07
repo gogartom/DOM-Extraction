@@ -78,6 +78,8 @@ __C.TRAIN.SNAPSHOT_INFIX = ''
 # So far I haven't found this useful; likely more engineering work is required
 __C.TRAIN.USE_PREFETCH = False
 
+__C.TRAIN.CHANGE_HUE = True
+
 #
 # Testing options
 #
