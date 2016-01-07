@@ -33,7 +33,7 @@ def parse_args():
                         default='models/CaffeNet_DOM_regres/test.prototxt', type=str)
     parser.add_argument('--net', dest='caffemodel',
                         help='model to test',
-                        default='output/eshops/eshops/caffenet_DOM_regres_iter_2000.caffemodel', type=str)
+                        default='output/eshops/eshops/caffenet_DOM_regres_iter_1000.caffemodel', type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default='experiments/cfgs/DOM_regres.yml', type=str)
     parser.add_argument('--wait', dest='wait',

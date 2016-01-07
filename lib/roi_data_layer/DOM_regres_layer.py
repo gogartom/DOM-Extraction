@@ -50,16 +50,16 @@ class DOMRegresDataLayer(caffe.Layer):
     def set_roidb(self, roidb, means, stds):
         """Set the roidb to be used by this layer during training."""
         self._roidb = roidb
-	self._means = means
-	self._stds = stds
+        self._means = means
+        self._stds = stds
         self._shuffle_roidb_inds()
         if cfg.TRAIN.USE_PREFETCH:
             self._blob_queue = Queue(10)
             self._prefetch_process = BlobFetcher(self._blob_queue,
                                                  self._roidb,
                                                  self._num_classes,
-						 self._means,
-						 self._stds)
+                                                 self._means,
+                                                 self._stds)
             self._prefetch_process.start()
             # Terminate the child process when the parent exists
             def cleanup():
@@ -80,8 +80,8 @@ class DOMRegresDataLayer(caffe.Layer):
         self._name_to_top_map = {
             'data': 0,
             'rois': 1,
-	    'bbox_targets': 2,
-	    'bbox_loss_weights': 3}
+            'bbox_targets': 2,
+            'bbox_loss_weights': 3}
 
         # data blob: holds a batch of N images, each with 3 channels
         # The height and width (100 x 100) are dummy values
@@ -96,11 +96,11 @@ class DOMRegresDataLayer(caffe.Layer):
         # classes plus background
         #top[2].reshape(1)
 
-	# bbox_targets blob: R bounding-box regression targets with 4
+        # bbox_targets blob: R bounding-box regression targets with 4
         # targets per class
         top[2].reshape(1, self._num_classes * 4)
 
-	# bbox_loss_weights blob: At most 4 targets per roi are active;
+        # bbox_loss_weights blob: At most 4 targets per roi are active;
         # thisbinary vector sepcifies the subset of active targets
         top[3].reshape(1, self._num_classes * 4)
 
@@ -142,8 +142,8 @@ class BlobFetcher(Process):
         self._queue = queue
         self._roidb = roidb
         self._num_classes = num_classes
-	self._means = means
-	self._stds = stds
+        self._means = means
+        self._stds = stds
         self._perm = None
         self._cur = 0
         self._shuffle_roidb_inds()

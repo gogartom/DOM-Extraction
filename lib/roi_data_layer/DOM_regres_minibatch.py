@@ -61,8 +61,8 @@ def get_minibatch(roidb, num_classes, means, stds):
     blobs = {'data': im_blob,
              'rois': rois_blob,
     #        'labels': labels_blob,
-	     'bbox_targets' : bbox_targets_blob,
-	     'bbox_loss_weights' : bbox_loss_blob}
+             'bbox_targets' : bbox_targets_blob,
+             'bbox_loss_weights' : bbox_loss_blob}
 
     #if cfg.TRAIN.BBOX_REG:
     #    blobs['bbox_targets'] = bbox_targets_blob
@@ -132,7 +132,7 @@ def _sample_rois(roidb, num_classes):
     #rois = rois[keep_inds]
 
     bbox_targets, bbox_loss_weights = \
-			 _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'])
+                         _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'])
 
     return rois, bbox_targets, bbox_loss_weights
 
@@ -146,13 +146,13 @@ def _get_image_blob(roidb, scale_inds):
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
 
-	# Change hue randomly
-	hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
-	add_value = np.random.randint(low=0,high=180,size=1)[0]
-	add_matrix = np.ones(hsv.shape[0:2])*add_value
-	hsv2 = hsv
-	hsv2[:,:,0] += add_matrix
-	im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
+        # Change hue randomly
+        hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
+        add_value = np.random.randint(low=0,high=180,size=1)[0]
+        add_matrix = np.ones(hsv.shape[0:2])*add_value
+        hsv2 = hsv
+        hsv2[:,:,0] += add_matrix
+        im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
 
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
@@ -217,35 +217,35 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds):
         im = im.astype(np.uint8)
 
         plt.imshow(im)
-	rect = plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
+        rect = plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
                           roi[3] - roi[1], fill=False,
                           edgecolor='r', linewidth=3)
-	
         
-	# show bbox regression
-	circles = []
+        
+        # show bbox regression
+        circles = []
         for j in xrange(1,4):
-	    bbox = bbox_targets_blob[i,j*4:j*4+4]
-	    m = means[j*4:j*4+4]
-	    s = stds[j*4:j*4+4]
+            bbox = bbox_targets_blob[i,j*4:j*4+4]
+            m = means[j*4:j*4+4]
+            s = stds[j*4:j*4+4]
 
-	    dx = bbox[0]*s[0]+m[0]
-	    dy = bbox[1]*s[1]+m[1]
+            dx = bbox[0]*s[0]+m[0]
+            dy = bbox[1]*s[1]+m[1]
 
-	    width = roi[2] - roi[0]
-	    height = roi[3] - roi[1]
+            width = roi[2] - roi[0]
+            height = roi[3] - roi[1]
 
-	    center_x = width/2 + dx*width
-	    center_y = height/2 + dy*height
+            center_x = width/2 + dx*width
+            center_y = height/2 + dy*height
 
-	    circle=plt.Circle((center_x+roi[0],center_y+roi[1]),10,color='b')
-	    circles.append(circle)
-	    plt.gca().add_patch(circles[j-1])
+            circle=plt.Circle((center_x+roi[0],center_y+roi[1]),10,color='b')
+            circles.append(circle)
+            plt.gca().add_patch(circles[j-1])
 
         plt.gca().add_patch(rect)
         #plt.show()
-	plt.savefig('blobs/blob_'+str(i)+'.png')
+        plt.savefig('blobs/blob_'+str(i)+'.png')
 
-	rect.remove()
-	for circ in circles:
-	    circ.remove()
+        rect.remove()
+        for circ in circles:
+            circ.remove()
