@@ -92,10 +92,6 @@ class DOMRegresDataLayer(caffe.Layer):
         # rectangle (x1, y1, x2, y2)
         top[1].reshape(1, 5)
 
-        # labels blob: R categorical labels in [0, ..., K] for K foreground
-        # classes plus background
-        #top[2].reshape(1)
-
         # bbox_targets blob: R bounding-box regression targets with 4
         # targets per class
         top[2].reshape(1, self._num_classes * 4)
@@ -104,17 +100,6 @@ class DOMRegresDataLayer(caffe.Layer):
         # thisbinary vector sepcifies the subset of active targets
         top[3].reshape(1, self._num_classes * 4)
 
-        #if cfg.TRAIN.BBOX_REG:
-        #    self._name_to_top_map['bbox_targets'] = 3
-        #    self._name_to_top_map['bbox_loss_weights'] = 4
-
-        #    # bbox_targets blob: R bounding-box regression targets with 4
-        #    # targets per class
-        #    top[3].reshape(1, self._num_classes * 4)
-
-        #    # bbox_loss_weights blob: At most 4 targets per roi are active;
-        #    # thisbinary vector sepcifies the subset of active targets
-        #    top[4].reshape(1, self._num_classes * 4)
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""

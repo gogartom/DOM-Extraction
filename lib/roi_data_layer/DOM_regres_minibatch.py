@@ -24,14 +24,6 @@ def get_minibatch(roidb, num_classes, means, stds):
     random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
                                     size=num_images)
 
-    #-- BATCH SIZE = num images
-    #assert(cfg.TRAIN.BATCH_SIZE % num_images == 0), \
-    #    'num_images ({}) must divide BATCH_SIZE ({})'. \
-    #    format(num_images, cfg.TRAIN.BATCH_SIZE)
-    #rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
-   
-    #fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
-
     # Get the input image blob, formatted for caffe
     im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
@@ -51,7 +43,6 @@ def get_minibatch(roidb, num_classes, means, stds):
         rois_blob = np.vstack((rois_blob, rois_blob_this_image))
 
         # Add to labels, bbox targets, and bbox loss blobs
-        #labels_blob = np.hstack((labels_blob, labels))
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
 
@@ -60,16 +51,8 @@ def get_minibatch(roidb, num_classes, means, stds):
 
     blobs = {'data': im_blob,
              'rois': rois_blob,
-    #        'labels': labels_blob,
              'bbox_targets' : bbox_targets_blob,
              'bbox_loss_weights' : bbox_loss_blob}
-
-    #if cfg.TRAIN.BBOX_REG:
-    #    blobs['bbox_targets'] = bbox_targets_blob
-    #    blobs['bbox_loss_weights'] = bbox_loss_blob
-
-    #end = time.time()
-    #print 'minibatch took:',end-start
 
     return blobs
 
@@ -82,55 +65,8 @@ def _sample_rois(roidb, num_classes):
     possible_boxes = roidb['DOM_bbox_targets'].shape[0]
     chosen_ind = np.random.randint(low=0, high=possible_boxes, size=1)
 
-    # label = class RoI has max overlap with
-    #labels = roidb['max_classes']
-    #overlaps = roidb['max_overlaps']
-    #rois = roidb['boxes']
-    #rois = np.array([[0, 0, 1920-1, 1000-1]])
-
     rois = roidb['boxes'][chosen_ind]
-
     targets = roidb['DOM_bbox_targets'][chosen_ind,:,:][0]
-
-    # Select foreground RoIs as those with >= FG_THRESH overlap
-    #fg_inds = np.where(overlaps >= cfg.TRAIN.FG_THRESH)[0]
-   
-    # Guard against the case when an image has fewer than fg_rois_per_image
-    # foreground RoIs
-    #fg_rois_per_this_image = np.minimum(fg_rois_per_image, fg_inds.size)
-    
-    # Sample foreground regions without replacement
-    #if fg_inds.size > 0:
-    #    fg_inds = npr.choice(fg_inds, size=fg_rois_per_this_image,
-    #                         replace=False)
-
-    # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-    #bg_inds = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) &
-    #                   (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
-
-    # Compute number of background RoIs to take from this image (guarding
-    # against there being fewer than desired)
-    #bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
-    #bg_rois_per_this_image = np.minimum(bg_rois_per_this_image,
-    #                                    bg_inds.size)
-   
-    # Sample foreground regions without replacement
-    #if bg_inds.size > 0:
-    #    bg_inds = npr.choice(bg_inds, size=bg_rois_per_this_image,
-    #                         replace=False)
-
-    # The indices that we're selecting (both fg and bg)
-    #keep_inds = np.append(fg_inds, bg_inds)
-   
-    # Select sampled values from various arrays:
-    #labels = labels[keep_inds]
-    #labels = [1]
-
-    # Clamp labels for the background RoIs to 0
-    #labels[fg_rois_per_this_image:] = 0
-    #overlaps = overlaps[keep_inds]
-    #rois = rois[keep_inds]
-
     bbox_targets, bbox_loss_weights = \
                          _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'])
 
@@ -184,11 +120,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes):
         bbox_loss_weights (ndarray): N x 4K blob of loss weights
     """
 
-    #clss = bbox_target_data[:, 0]
     clss = target_classes
-
-    #bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
-    #bbox_loss_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
 
     bbox_targets = np.zeros((1, 4 * num_classes), dtype=np.float32)
     bbox_loss_weights = np.zeros(bbox_targets.shape, dtype=np.float32)

@@ -218,11 +218,6 @@ def get_DOM_regres_training_roidb(imdb):
         x_maxes = np.random.randint(low=b_x_max, high=x_max+1, size=box_count)
         y_maxes = np.random.randint(low=b_y_max, high=y_max+1, size=box_count)
 
-        #print 'left:',x_min,'-',b_x_min, x_mins
-        #print 'top:',y_min,'-',b_y_min,  y_mins
-        #print 'right:',b_x_max,'-',x_max, x_maxes
-        #print 'bottom:',b_y_max,'-',y_max,  y_maxes
-
         boxes = np.zeros((box_count,4),dtype=np.float)
         boxes[:,0] = x_mins
         boxes[:,1] = y_mins
