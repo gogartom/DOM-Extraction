@@ -8,6 +8,7 @@
 """Test a Fast R-CNN network on an imdb (image database)."""
 
 from fast_rcnn.config import cfg, get_output_dir
+from fast_rcnn.DOM_regres_evaluation import get_results 
 import argparse
 from utils.timer import Timer
 import numpy as np
@@ -247,122 +248,69 @@ def apply_nms(all_boxes, thresh):
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
     return nms_boxes
 
-def test_net(net, imdb, imdb_name):
-    """Test a Fast R-CNN network on an image database."""
-    num_images = len(imdb.image_index)
-    # heuristic: keep an average of 40 detections per class per images prior
-    # to NMS
-    #max_per_set = 40 * num_images
-    # heuristic: keep at most 100 detection per class per image prior to NMS
-    #max_per_image = 100
-    # detection thresold for each class (this is adaptively set based on the
-    # max_per_set constraint)
-    #thresh = -np.inf * np.ones(imdb.num_classes)
-    # top_scores will hold one minheap of scores per class (used to enforce
-    # the max_per_set constraint)
-    #top_scores = [[] for _ in xrange(imdb.num_classes)]
-    # all detections are collected into:
-    #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
-    #all_boxes = [[[] for _ in xrange(num_images)]
-    #             for _ in xrange(imdb.num_classes)]
 
-    output_dir = get_output_dir(imdb, net)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+def test_net(net, imdb, imdb_name, num_images=300):
+    """Test a Fast R-CNN network on an image database."""
+    total_num_images = len(imdb.image_index)
+    
+    # output dir should be changed
+    #output_dir = get_output_dir(imdb, net)
+    #if not os.path.exists(output_dir):
+    #    os.makedirs(output_dir)
 
     images_dir = 'test_DOM_regres_'+imdb_name
     if not os.path.exists(images_dir):
         os.makedirs(images_dir)
 
-    # timers
-    _t = {'im_detect' : Timer(), 'misc' : Timer()}
-
     roidb = imdb.roidb
+    indices = np.random.randint(low=0,high=total_num_images,size=num_images)
+
+    IOUs = np.zeros((num_images,3),dtype='float32')
+    matches = np.zeros((num_images,3),dtype='float32')
+
     for i in xrange(num_images):
-        im = cv2.imread(imdb.image_path_at(i))
-        _t['im_detect'].tic()
+        ind = indices[i]
+        im = cv2.imread(imdb.image_path_at(ind))
     
         #-- get boxes from network
-        dim_w = 1920-1
-        dim_h = 1080-1
-        w = 800
-        h = 600
-        proposals = []
-        for x0 in np.linspace(0, dim_w-w, num = 3):
-            for y0 in np.linspace(0, dim_h-h, num = 2):
-                proposals.append([x0, y0, x0+w, y0+h])
+        #dim_w = 1920-1
+        #dim_h = 1080-1
+        #w = 800
+        #h = 600
+        #proposals = []
+        #for x0 in np.linspace(0, dim_w-w, num = 3):
+        #    for y0 in np.linspace(0, dim_h-h, num = 2):
+        #        proposals.append([x0, y0, x0+w, y0+h])
     
-        #boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
-        boxes = im_detect(net, im, np.array(proposals))
+        boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
+        results_per_class = get_results(boxes,roidb[ind])        
+        
+        for j in xrange(0,3):
+            IOUs[i,j] = results_per_class[j][0]
+            matches[i,j] = results_per_class[j][1]
 
-        print boxes
+
+        #boxes = im_detect(net, im, np.array(proposals))
 
         #-- show in image
-        plt.imshow(im)
+        #plt.imshow(im)
 
-        rects = []                
+        #rects = []                
         
-        for k in xrange(len(boxes)):
-            for j in xrange(1,4):
-                bbox = boxes[k,j*4:j*4+4]
-                rect = plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0],
-                       bbox[3] - bbox[1], fill=False,
-                       edgecolor='r', linewidth=3)
+        #for k in xrange(len(boxes)):
+        #    for j in xrange(1,4):
+        #        bbox = boxes[k,j*4:j*4+4]
+        #        rect = plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0],
+        #               bbox[3] - bbox[1], fill=False,
+        #               edgecolor='r', linewidth=3)
 
-                rects.append(rect)
-                plt.gca().add_patch(rect)
+        #        rects.append(rect)
+        #        plt.gca().add_patch(rect)
 
-        plt.savefig(images_dir+'/im_'+str(i)+'.png')
+        #plt.savefig(images_dir+'/im_'+str(i)+'.png')
       
-        for rect in rects:
-            rect.remove()
+        #for rect in rects:
+        #    rect.remove()
 
-        _t['im_detect'].toc()
 
-    #    _t['misc'].tic()
-    #    for j in xrange(1, imdb.num_classes):
-    #        inds = np.where((scores[:, j] > thresh[j]) &
-    #                        (roidb[i]['gt_classes'] == 0))[0]
-    #        cls_scores = scores[inds, j]
-    #        cls_boxes = boxes[inds, j*4:(j+1)*4]
-    #        top_inds = np.argsort(-cls_scores)[:max_per_image]
-    #        cls_scores = cls_scores[top_inds]
-    #        cls_boxes = cls_boxes[top_inds, :]
-    #        # push new scores onto the minheap
-    #        for val in cls_scores:
-    #            heapq.heappush(top_scores[j], val)
-    #        # if we've collected more than the max number of detection,
-    #        # then pop items off the minheap and update the class threshold
-    #        if len(top_scores[j]) > max_per_set:
-    #            while len(top_scores[j]) > max_per_set:
-    #                heapq.heappop(top_scores[j])
-    #            thresh[j] = top_scores[j][0]
-
-    #        all_boxes[j][i] = \
-    #                np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-    #                .astype(np.float32, copy=False)
-
-    #        if 0:
-    #            keep = nms(all_boxes[j][i], 0.3)
-    #            vis_detections(im, imdb.classes[j], all_boxes[j][i][keep, :])
-    #    _t['misc'].toc()
-
-    #    print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
-    #          .format(i + 1, num_images, _t['im_detect'].average_time,
-    #                  _t['misc'].average_time)
-
-    #for j in xrange(1, imdb.num_classes):
-    #    for i in xrange(num_images):
-    #        inds = np.where(all_boxes[j][i][:, -1] > thresh[j])[0]
-    #        all_boxes[j][i] = all_boxes[j][i][inds, :]
-
-    #det_file = os.path.join(output_dir, 'detections.pkl')
-    #with open(det_file, 'wb') as f:
-    #    cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
-
-    #print 'Applying NMS to all detections'
-    #nms_dets = apply_nms(all_boxes, cfg.TEST.NMS)
-
-    #print 'Evaluating detections'
-    #imdb.evaluate_detections(nms_dets, output_dir)
+    return np.mean(matches, axis=0), np.mean(IOUs, axis=0)

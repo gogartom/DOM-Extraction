@@ -6,7 +6,7 @@
 # --------------------------------------------------------
 
 """Train a Fast R-CNN network."""
-
+import inspect
 import caffe
 from fast_rcnn.config import cfg
 import roi_data_layer.roidb as rdl_roidb
@@ -176,6 +176,8 @@ class SolverWrapper(object):
             timer.tic()
             self.solver.step(1)
             timer.toc()
+
+            print inspect.getmembers(self.solver, lambda a:not(inspect.isroutine(a)))
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
 

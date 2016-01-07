@@ -8,3 +8,4 @@
 from . import config
 from . import train
 from . import test
+from . import DOM_regres_evaluation

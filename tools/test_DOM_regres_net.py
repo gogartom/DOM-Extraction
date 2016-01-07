@@ -82,4 +82,11 @@ if __name__ == '__main__':
     imdb = datasets.eshops(args.imdb_name)
     imdb.competition_mode(args.comp_mode)
 
-    test_net(net, imdb, args.imdb_name)
+    precision, aver_IOU = test_net(net, imdb, args.imdb_name)
+    print '======================='
+    print 'Precision:'
+    print 'Price',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
+    print '======================='
+    print 'Average IOU:'
+    print 'Price',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+    print '======================='
