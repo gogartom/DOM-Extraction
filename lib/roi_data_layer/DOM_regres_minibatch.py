@@ -56,7 +56,7 @@ def get_minibatch(roidb, num_classes, means, stds):
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
 
     # For debug visualizations
-    #_vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds)
+    _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds)
 
     blobs = {'data': im_blob,
              'rois': rois_blob,
@@ -145,6 +145,15 @@ def _get_image_blob(roidb, scale_inds):
     im_scales = []
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
+
+	# Change hue randomly
+	hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
+	add_value = np.random.randint(low=0,high=180,size=1)[0]
+	add_matrix = np.ones(hsv.shape[0:2])*add_value
+	hsv2 = hsv
+	hsv2[:,:,0] += add_matrix
+	im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
+
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
