@@ -148,14 +148,15 @@ class SolverWrapper(object):
                     (net.params['bbox_pred'][1].data *
                      self.bbox_stds + self.bbox_means)
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        iters_dir = os.path.join(self.output_dir, 'iters')
+        if not os.path.exists(iters_dir):
+            os.makedirs(iters_dir)
 
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
                  if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
         filename = (self.solver_param.snapshot_prefix + infix +
                     '_iter_{:d}'.format(self.solver.iter) + '.caffemodel')
-        filename = os.path.join(self.output_dir, filename)
+        filename = os.path.join(iters_dir, filename)
 
         net.save(str(filename))
         print 'Wrote snapshot to: {:s}'.format(filename)

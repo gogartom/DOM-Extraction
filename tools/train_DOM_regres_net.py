@@ -23,6 +23,10 @@ import argparse
 import pprint
 import numpy as np
 import sys
+import datetime
+import time
+import shutil
+import os
 
 def parse_args():
     """
@@ -91,7 +95,11 @@ if __name__ == '__main__':
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
     roidb = get_DOM_regres_training_roidb(imdb)
 
-    output_dir = get_output_dir(imdb, None)
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
+    output_dir = os.path.join(get_output_dir(imdb, None), args.imdb_name + '_' + st)
+    os.makedirs(output_dir)
+    shutil.copy2(args.cfg_file, output_dir)
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     train_net(args.solver, roidb, output_dir,

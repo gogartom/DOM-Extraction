@@ -46,8 +46,9 @@ def get_minibatch(roidb, num_classes, means, stds):
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
 
-    # For debug visualizations
-    _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds)
+    if cfg.TRAIN.VIS_MINIBATCH:
+        # For debug visualizations
+        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds)
 
     blobs = {'data': im_blob,
              'rois': rois_blob,

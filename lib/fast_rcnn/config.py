@@ -80,6 +80,8 @@ __C.TRAIN.USE_PREFETCH = False
 
 __C.TRAIN.CHANGE_HUE = True
 
+__C.TRAIN.VIS_MINIBATCH = False
+
 #
 # Testing options
 #
