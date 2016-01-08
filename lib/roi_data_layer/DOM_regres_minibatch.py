@@ -32,6 +32,7 @@ def get_minibatch(roidb, num_classes, means, stds):
     labels_blob = np.zeros((0), dtype=np.float32)
     bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
     bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
+    names = []
     for im_i in xrange(num_images):
         im_rois, bbox_targets, bbox_loss \
             = _sample_rois(roidb[im_i], num_classes)
@@ -46,9 +47,12 @@ def get_minibatch(roidb, num_classes, means, stds):
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
 
+        # Add name for visualization
+        names.append(roidb[im_i]['image'].split('/')[-1])
+
     if cfg.TRAIN.VIS_MINIBATCH:
         # For debug visualizations
-        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds)
+        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, names, means, stds)
 
     blobs = {'data': im_blob,
              'rois': rois_blob,
@@ -83,8 +87,8 @@ def _get_image_blob(roidb, scale_inds):
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
 
+        # Change HUE randomly
         if cfg.TRAIN.CHANGE_HUE:
-            # Change hue randomly
             hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
             add_value = np.random.randint(low=0,high=180,size=1)[0]
             add_matrix = np.ones(hsv.shape[0:2])*add_value
@@ -92,8 +96,18 @@ def _get_image_blob(roidb, scale_inds):
             hsv2[:,:,0] += add_matrix
             im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
 
+        # Hide some of non-overlaping elements
+        # We should get rid of for cycle
+        if cfg.TRAIN.HIDE_OTHERS:
+            elements = roidb[i]['non_overlap_elements']
+            for j in xrange(elements.shape[0]):
+                if np.random.uniform()<cfg.TRAIN.HIDE_RATIO:
+                    im[elements[j,1]:elements[j,3],elements[j,0]:elements[j,2],:] = 255
+
+        # Fliping
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
+       
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
         im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                                         cfg.TRAIN.MAX_SIZE)
@@ -137,7 +151,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes):
 
     return bbox_targets, bbox_loss_weights
 
-def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds):
+def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, names, means, stds):
     """Visualize a mini-batch for debugging."""
     import matplotlib.pyplot as plt
    
@@ -178,7 +192,7 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, means, stds):
 
         plt.gca().add_patch(rect)
         #plt.show()
-        plt.savefig('blobs/blob_'+str(i)+'.png')
+        plt.savefig('blobs/'+names[i])
 
         rect.remove()
         for circ in circles:

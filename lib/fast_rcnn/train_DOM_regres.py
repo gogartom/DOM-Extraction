@@ -6,7 +6,6 @@
 # --------------------------------------------------------
 
 """Train a Fast R-CNN network."""
-import inspect
 import caffe
 from fast_rcnn.config import cfg
 import roi_data_layer.roidb as rdl_roidb
@@ -49,11 +48,11 @@ class SolverWrapper(object):
 
     def prepare_bbox_regression_targets(self,roidb):
         num_images = len(roidb)
-        num_classes = roidb[0]['gt_boxes'].shape[0] + 1
+        num_classes = roidb[0]['gt_elements'].shape[0] + 1
 
         #-- Get targets
         for im_i in xrange(num_images):
-            targets = roidb[im_i]['gt_boxes']
+            targets = roidb[im_i]['gt_elements']
             target_classes = roidb[im_i]['gt_classes']
             boxes = roidb[im_i]['boxes']
             roidb[im_i]['DOM_bbox_targets'] = self._compute_targets(targets, target_classes, boxes)
@@ -177,7 +176,6 @@ class SolverWrapper(object):
             self.solver.step(1)
             timer.toc()
 
-            print inspect.getmembers(self.solver, lambda a:not(inspect.isroutine(a)))
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
@@ -188,8 +186,15 @@ class SolverWrapper(object):
         if last_snapshot_iter != self.solver.iter:
             self.snapshot()
 
+def get_non_overlaping_elements(boxes, overlaps):
+    inds_to_delete = overlaps.max(axis=1).nonzero()[0]
+    boxes = np.delete(boxes,inds_to_delete, axis=0)
+    return boxes
+
 def get_DOM_regres_training_roidb(imdb):
-    roidb = imdb.gt_roidb()
+    gt_roidb = imdb.gt_roidb()
+    roidb = imdb.roidb    
+    my_roidb = []
 
     box_count = 5
 
@@ -198,17 +203,25 @@ def get_DOM_regres_training_roidb(imdb):
     y_min,y_max = 0,1000-1
 
     for i in xrange(len(imdb.image_index)):
+        my_roidb.append({})
+
         # add image
-        roidb[i]['image'] = imdb.image_path_at(i)
+        my_roidb[i]['image'] = imdb.image_path_at(i)
         
-        # change key names
-        roidb[i]['gt_boxes'] = roidb[i]['boxes']
-        roidb[i].pop("gt_overlaps", None)
-        roidb[i].pop("boxes", None)
+        # copy gt boxes and their classes
+        my_roidb[i]['gt_elements'] = gt_roidb[i]['boxes']
+        my_roidb[i]['gt_classes'] = gt_roidb[i]['gt_classes']
+        my_roidb[i]['flipped'] = gt_roidb[i]['flipped']
+
+        # add non overlaping elements
+        my_roidb[i]['non_overlap_elements'] =   \
+            get_non_overlaping_elements(roidb[i]['boxes'],roidb[i]['gt_overlaps'])
+
+        ## --- COMPUTE BOXES
 
         # get the smallest area where are all the boxes
-        mins = np.min(roidb[i]['gt_boxes'][:,0:2],axis=0)
-        maxs = np.max(roidb[i]['gt_boxes'][:,2:4],axis=0)
+        mins = np.min(my_roidb[i]['gt_elements'][:,0:2],axis=0)
+        maxs = np.max(my_roidb[i]['gt_elements'][:,2:4],axis=0)
         b_x_min,b_y_min = mins[0],mins[1]
         b_x_max,b_y_max = maxs[0],maxs[1]
 
@@ -227,9 +240,9 @@ def get_DOM_regres_training_roidb(imdb):
         boxes[:,2] = x_maxes
         boxes[:,3] = y_maxes
 
-        roidb[i]['boxes'] = boxes
+        my_roidb[i]['boxes'] = boxes
 
-    return roidb
+    return my_roidb
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""

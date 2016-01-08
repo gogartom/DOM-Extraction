@@ -82,6 +82,9 @@ __C.TRAIN.CHANGE_HUE = True
 
 __C.TRAIN.VIS_MINIBATCH = False
 
+__C.TRAIN.HIDE_OTHERS = False
+__C.TRAIN.HIDE_RATIO = 0.15
+
 #
 # Testing options
 #
