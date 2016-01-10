@@ -308,7 +308,7 @@ def get_DOM_regres_training_roidb(imdb):
     roidb = imdb.roidb    
     my_roidb = []
 
-    box_count = 5
+    box_count = 10
 
     # define coordinates of max box
     x_min,x_max = 0,1920-1

@@ -48,7 +48,9 @@ def get_minibatch(roidb, num_classes, means, stds):
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
 
         # Add name for visualization
-        names.append(roidb[im_i]['image'].split('/')[-1])
+        names.extend([roidb[im_i]['image'].split('/')[-1]]*cfg.TRAIN.BOXES_PER_IM)
+        #names.append(roidb[im_i]['image'].split('/')[-1])
+
 
     if cfg.TRAIN.VIS_MINIBATCH:
         # For debug visualizations
@@ -68,12 +70,13 @@ def _sample_rois(roidb, num_classes):
     
     # Randomly choose one of possible boxes
     possible_boxes = roidb['DOM_bbox_targets'].shape[0]
-    chosen_ind = np.random.randint(low=0, high=possible_boxes, size=1)
+    #chosen_ind = np.random.randint(low=0, high=possible_boxes, size=5)
+    chosen_ind = np.random.choice(possible_boxes, cfg.TRAIN.BOXES_PER_IM, replace=False)
 
     rois = roidb['boxes'][chosen_ind]
-    targets = roidb['DOM_bbox_targets'][chosen_ind,:,:][0]
-    include = roidb['include_gt_elements'][chosen_ind,:][0]
-
+    targets = roidb['DOM_bbox_targets'][chosen_ind,:,:]
+    include = roidb['include_gt_elements'][chosen_ind,:]
+    
     bbox_targets, bbox_loss_weights = \
                          _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'], include)
 
@@ -140,7 +143,8 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes, i
 
     clss = target_classes
 
-    bbox_targets = np.zeros((1, 4 * num_classes), dtype=np.float32)
+    
+    bbox_targets = np.zeros((bbox_target_data.shape[0], 4 * num_classes), dtype=np.float32)
     bbox_loss_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
 
     inds = np.where(clss > 0)[0]
@@ -149,9 +153,9 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes, i
         start = 4 * cls
         end = start + 4
 
-        if include_gt_elements[ind]:
-            bbox_targets[0, start:end] = bbox_target_data[ind, :]
-            bbox_loss_weights[0, start:end] = [1., 1., 1., 1.]
+        indices_with_class = np.where(include_gt_elements[:,ind])[0]
+        bbox_targets[indices_with_class, start:end] = bbox_target_data[indices_with_class, ind,:]
+        bbox_loss_weights[indices_with_class, start:end] = [1., 1., 1., 1.]
 
     return bbox_targets, bbox_loss_weights
 
@@ -196,7 +200,7 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, 
                 circles.append(circle)
                 plt.gca().add_patch(circle)
 
-        plt.savefig('blobs/'+names[i])
+        plt.savefig('blobs/'+str(i)+'_'+names[i])
 
         rect.remove()
         for circ in circles:
