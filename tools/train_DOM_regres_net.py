@@ -51,6 +51,9 @@ def parse_args():
     parser.add_argument('--imdb', dest='imdb_name',
                         help='dataset to train on',
                         default='master_train', type=str)
+    parser.add_argument('--imdb_test', dest='imdb_test_name',
+                        help='dataset to test on',
+                        default='master_not_seen_test', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -91,6 +94,7 @@ if __name__ == '__main__':
 
     
     imdb = datasets.eshops(args.imdb_name)
+    imdb_test = datasets.eshops(args.imdb_test_name)
 
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
     roidb = get_DOM_regres_training_roidb(imdb)
@@ -102,6 +106,8 @@ if __name__ == '__main__':
     shutil.copy2(args.cfg_file, output_dir)
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
-    train_net(args.solver, roidb, output_dir,
+
+    train_net(args.solver, roidb, imdb_test, 
+              args.imdb_test_name, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)

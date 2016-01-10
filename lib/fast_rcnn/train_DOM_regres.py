@@ -7,6 +7,7 @@
 
 """Train a Fast R-CNN network."""
 import caffe
+from fast_rcnn.test_DOM_regres import test_net
 from fast_rcnn.config import cfg
 import roi_data_layer.roidb as rdl_roidb
 from utils.timer import Timer
@@ -23,10 +24,12 @@ class SolverWrapper(object):
     use to unnormalize the learned bounding-box regression weights.
     """
 
-    def __init__(self, solver_prototxt, roidb, output_dir,
+    def __init__(self, solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
                  pretrained_model=None):
         """Initialize the SolverWrapper."""
         self.output_dir = output_dir
+        self.imdb_test = imdb_test
+        self.imdb_test_name = imdb_test_name
 
         print 'Computing bounding-box regression targets...'
         #self.bbox_means, self.bbox_stds = \
@@ -175,6 +178,23 @@ class SolverWrapper(object):
             net.params['bbox_pred'][0].data[...] = orig_0
             net.params['bbox_pred'][1].data[...] = orig_1
 
+    def test_model(self):
+        iters_dir = os.path.join(self.output_dir, 'iters')
+        infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
+                 if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
+        filename = (self.solver_param.snapshot_prefix + infix +
+                    '_iter_{:d}'.format(self.solver.iter) + '.caffemodel')
+        filename = str(os.path.join(iters_dir, filename))
+
+        print 'Testing net using net at:', filename        
+        # TODO: add test.prototxt to params
+        net = caffe.Net('models/CaffeNet_DOM_regres/test.prototxt', filename, caffe.TEST)
+        net.name = os.path.splitext(os.path.basename(filename))[0]
+
+        precision, aver_IOU = test_net(net, self.imdb_test, self.imdb_test_name)
+        print 'Precision:', 'Price:',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
+        print 'Average IOU:', 'Price:',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+
     def train_model(self, max_iters):
         """Network training loop."""
         print 'Max iters:',max_iters
@@ -192,9 +212,11 @@ class SolverWrapper(object):
             if self.solver.iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = self.solver.iter
                 self.snapshot()
+                self.test_model()
 
         if last_snapshot_iter != self.solver.iter:
             self.snapshot()
+            self.test_model()
 
 def get_non_overlaping_elements(boxes, overlaps):
     inds_to_delete = overlaps.max(axis=1).nonzero()[0]
@@ -337,10 +359,10 @@ def get_training_roidb(imdb):
 
     return imdb.roidb
 
-def train_net(solver_prototxt, roidb, output_dir,
+def train_net(solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
               pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
-    sw = SolverWrapper(solver_prototxt, roidb, output_dir,
+    sw = SolverWrapper(solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
                        pretrained_model=pretrained_model)
 
     print 'Solving...'
