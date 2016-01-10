@@ -61,33 +61,43 @@ class SolverWrapper(object):
         #-- var(x) = E(x^2) - E(x)^2
         sums = np.zeros((num_classes, 4))
         squared_sums = np.zeros((num_classes, 4))
-        boxes_counts = 0     
+        class_counts = np.zeros((num_classes, 1)) + cfg.EPS
+        #boxes_counts = 0     
         for im_i in xrange(num_images):
             targets = roidb[im_i]['DOM_bbox_targets']
             target_classes = roidb[im_i]['gt_classes']
+            #boxes_counts += targets.shape[0]
+            include_classes = roidb[im_i]['include_gt_elements']
 
-            boxes_counts += targets.shape[0]
             for cls in xrange(1, num_classes):
-                cls_ind = np.where(target_classes == cls)[0][0]                
-                sums[cls, :] += targets[:,cls_ind,:].sum(axis=0)
-                squared_sums[cls, :] += (targets[:,cls_ind,:] ** 2).sum(axis=0)
+                gt_element_ind = np.where(target_classes == cls)[0][0]
+                boxes_inds = np.where(include_classes[:, gt_element_ind])[0]
+
+                if boxes_inds.size > 0:                
+                    class_counts[cls] += boxes_inds.size
+                    sums[cls, :] += targets[boxes_inds,gt_element_ind,:].sum(axis=0)
+                    squared_sums[cls, :] += (targets[boxes_inds,gt_element_ind,:] ** 2).sum(axis=0)
         
-        means = sums / boxes_counts
-        stds = np.sqrt(squared_sums / boxes_counts - means ** 2)
+        means = sums / class_counts
+        stds = np.sqrt(squared_sums / class_counts - means ** 2)
 
         #-- Normalize targets
         for im_i in xrange(num_images):
             targets = roidb[im_i]['DOM_bbox_targets']
-            for cls in xrange(1, num_classes):
-                cls_ind = np.where(target_classes == cls)[0][0]
+            include_classes = roidb[im_i]['include_gt_elements']
 
-                roidb[im_i]['DOM_bbox_targets'][:,cls_ind, :] -= means[cls, :]
-                roidb[im_i]['DOM_bbox_targets'][:,cls_ind, :] /= stds[cls, :]
+            for cls in xrange(1, num_classes):
+
+                gt_element_ind = np.where(target_classes == cls)[0][0]
+                boxes_inds = np.where(include_classes[:, gt_element_ind])[0]
+
+                roidb[im_i]['DOM_bbox_targets'][boxes_inds,gt_element_ind, :] -= means[cls, :]
+                roidb[im_i]['DOM_bbox_targets'][boxes_inds,gt_element_ind, :] /= stds[cls, :]
+
 
         return means.ravel(), stds.ravel()
 
     def _compute_targets(self, gt, gt_classes, boxes):
-        #top_page_roi = [0, 0, 1920-1, 1000-1]
         
         gt_count = len(gt_classes)
         boxes_count = len(boxes)
@@ -191,6 +201,86 @@ def get_non_overlaping_elements(boxes, overlaps):
     boxes = np.delete(boxes,inds_to_delete, axis=0)
     return boxes
 
+# returns bounds for generating custom boxes
+def get_bounds(gt_elements, gt_classes, single_element=None):
+
+    num_elements = len(gt_elements)
+    contain_boxes = np.zeros((0,4))
+    exclude_boxes = np.zeros((0,4))
+
+    for el_ind in xrange(num_elements):
+        #gt_ind = np.where(gt_classes==cls)[0][0]
+
+        # if add all elements or particular element
+        if (single_element is None or single_element == el_ind):
+            contain_boxes = np.vstack((contain_boxes,np.array(gt_elements[el_ind,:])))  
+        else:
+            exclude_boxes = np.vstack((exclude_boxes,np.array(gt_elements[el_ind,:])))
+
+
+    # Compute inner bounds
+    # get the smallest area where are all contained boxes
+    inner_bounds = [np.min(contain_boxes[:,0],axis=0),
+                    np.min(contain_boxes[:,1],axis=0),
+                    np.max(contain_boxes[:,2],axis=0),
+                    np.max(contain_boxes[:,3],axis=0)]
+
+    # Computer outer edges
+    # right_exclude_edges left from left_inner_edge
+    outer_x_mins = exclude_boxes[exclude_boxes[:,2]<inner_bounds[0],2].tolist()
+    # left_exclude_edges right from right_inner_edge
+    outer_x_maxs = exclude_boxes[exclude_boxes[:,0]>inner_bounds[2],0].tolist()
+    # bottom_exclude_edges up from top_inner_edge
+    outer_y_mins = exclude_boxes[exclude_boxes[:,3]<inner_bounds[1],3].tolist()
+    # top_exclude_edges down from bottom_inner_edge
+    outer_y_maxs = exclude_boxes[exclude_boxes[:,1]>inner_bounds[3],1].tolist()
+
+    # Prepare absolute bounds 
+    abs_x_min,abs_x_max = 0,1920-1
+    abs_y_min,abs_y_max = 0,1000-1
+
+    # if there is y_max larger then abs_max
+    # enlarge abs_max box (we need to check only y_max)
+    if(len(outer_y_maxs)>0):
+        abs_y_max = max(abs_y_max,max(outer_y_maxs))
+        
+
+    # Add absolute bounds and get the right value
+    outer_x_mins.append(abs_x_min)
+    outer_y_mins.append(abs_y_min)
+    outer_x_maxs.append(abs_x_max)
+    outer_y_maxs.append(abs_y_max)
+  
+    # Get bounds
+    outer_x_min = max(outer_x_mins)
+    outer_y_min = max(outer_y_mins)
+    outer_x_max = min(outer_x_maxs)
+    outer_y_max = min(outer_y_maxs)
+
+    # Check that outer_max_y is lower than inner_max_y
+    outer_y_max = max(outer_y_max,inner_bounds[3])
+
+    # save outer bounds
+    outer_bounds = [outer_x_min, outer_y_min, outer_x_max, outer_y_max]
+
+    return inner_bounds, outer_bounds
+
+def generate_boxes(gt_elements, gt_classes, box_count, single_element = None):
+    inner_bounds, outer_bounds = get_bounds(gt_elements, gt_classes, single_element)
+  
+    x_mins = np.random.randint(low=outer_bounds[0], high=inner_bounds[0]+1, size=box_count)
+    y_mins = np.random.randint(low=outer_bounds[1], high=inner_bounds[1]+1, size=box_count)
+    x_maxes = np.random.randint(low=inner_bounds[2], high=outer_bounds[2]+1, size=box_count)
+    y_maxes = np.random.randint(low=inner_bounds[3], high=outer_bounds[3]+1, size=box_count)
+
+    boxes = np.zeros((box_count,4),dtype=np.float)
+    
+    boxes[:,0] = x_mins
+    boxes[:,1] = y_mins
+    boxes[:,2] = x_maxes
+    boxes[:,3] = y_maxes
+    return boxes
+
 def get_DOM_regres_training_roidb(imdb):
     gt_roidb = imdb.gt_roidb()
     roidb = imdb.roidb    
@@ -217,32 +307,22 @@ def get_DOM_regres_training_roidb(imdb):
         my_roidb[i]['non_overlap_elements'] =   \
             get_non_overlaping_elements(roidb[i]['boxes'],roidb[i]['gt_overlaps'])
 
-        ## --- COMPUTE BOXES
+        # COMPUTE BOXES
+        gt_count = my_roidb[i]['gt_elements'].shape[0]
+        my_roidb[i]['boxes'] = generate_boxes(my_roidb[i]['gt_elements'],my_roidb[i]['gt_classes'],box_count,)
+        my_roidb[i]['include_gt_elements'] = np.ones((box_count, gt_count), dtype=bool) #[my_roidb[i]['gt_classes']]*box_count
 
-        # get the smallest area where are all the boxes
-        mins = np.min(my_roidb[i]['gt_elements'][:,0:2],axis=0)
-        maxs = np.max(my_roidb[i]['gt_elements'][:,2:4],axis=0)
-        b_x_min,b_y_min = mins[0],mins[1]
-        b_x_max,b_y_max = maxs[0],maxs[1]
-
-        # enlarge max box if needed (we need to move only y_max)
-        y_max = max(y_max,b_y_max)
-
-        # generate boxes that include all gt_boxes
-        x_mins = np.random.randint(low=x_min, high=b_x_min+1, size=box_count)
-        y_mins = np.random.randint(low=y_min, high=b_y_min+1, size=box_count)
-        x_maxes = np.random.randint(low=b_x_max, high=x_max+1, size=box_count)
-        y_maxes = np.random.randint(low=b_y_max, high=y_max+1, size=box_count)
-
-        boxes = np.zeros((box_count,4),dtype=np.float)
-        boxes[:,0] = x_mins
-        boxes[:,1] = y_mins
-        boxes[:,2] = x_maxes
-        boxes[:,3] = y_maxes
-
-        my_roidb[i]['boxes'] = boxes
-
+        # TODO: IF SINGLE_CLASS_BOXES        
+        if cfg.TRAIN.SINGLE_CLASS_BOXES:
+            for j in xrange(gt_count):
+                single_boxes = generate_boxes(my_roidb[i]['gt_elements'],my_roidb[i]['gt_classes'], box_count, single_element=j)
+                include_classes = np.zeros((box_count, gt_count), dtype=bool)
+                include_classes[:,j] = True
+                my_roidb[i]['boxes'] = np.vstack((my_roidb[i]['boxes'],single_boxes))
+                my_roidb[i]['include_gt_elements'] = np.vstack((my_roidb[i]['include_gt_elements'],include_classes))
+        
     return my_roidb
+
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""

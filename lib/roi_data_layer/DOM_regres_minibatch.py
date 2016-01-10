@@ -52,7 +52,7 @@ def get_minibatch(roidb, num_classes, means, stds):
 
     if cfg.TRAIN.VIS_MINIBATCH:
         # For debug visualizations
-        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, names, means, stds)
+        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, means, stds)
 
     blobs = {'data': im_blob,
              'rois': rois_blob,
@@ -72,8 +72,10 @@ def _sample_rois(roidb, num_classes):
 
     rois = roidb['boxes'][chosen_ind]
     targets = roidb['DOM_bbox_targets'][chosen_ind,:,:][0]
+    include = roidb['include_gt_elements'][chosen_ind,:][0]
+
     bbox_targets, bbox_loss_weights = \
-                         _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'])
+                         _get_bbox_regression_labels(targets,num_classes, roidb['gt_classes'], include)
 
     return rois, bbox_targets, bbox_loss_weights
 
@@ -123,7 +125,7 @@ def _project_im_rois(im_rois, im_scale_factor):
     rois = im_rois * im_scale_factor
     return rois
 
-def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes):
+def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes, include_gt_elements):
     """Bounding-box regression targets are stored in a compact form in the
     roidb.
 
@@ -146,12 +148,14 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes, target_classes):
         cls = clss[ind]
         start = 4 * cls
         end = start + 4
-        bbox_targets[0, start:end] = bbox_target_data[ind, :]
-        bbox_loss_weights[0, start:end] = [1., 1., 1., 1.]
+
+        if include_gt_elements[ind]:
+            bbox_targets[0, start:end] = bbox_target_data[ind, :]
+            bbox_loss_weights[0, start:end] = [1., 1., 1., 1.]
 
     return bbox_targets, bbox_loss_weights
 
-def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, names, means, stds):
+def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, means, stds):
     """Visualize a mini-batch for debugging."""
     import matplotlib.pyplot as plt
    
@@ -168,30 +172,30 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, names, means, stds):
         rect = plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
                           roi[3] - roi[1], fill=False,
                           edgecolor='r', linewidth=3)
-        
+        plt.gca().add_patch(rect)
+
         
         # show bbox regression
         circles = []
         for j in xrange(1,4):
-            bbox = bbox_targets_blob[i,j*4:j*4+4]
-            m = means[j*4:j*4+4]
-            s = stds[j*4:j*4+4]
+            if bbox_loss_blob[i, j*4:j*4+4].all():
+                bbox = bbox_targets_blob[i, j*4:j*4+4]
+                m = means[j*4:j*4+4]
+                s = stds[j*4:j*4+4]
 
-            dx = bbox[0]*s[0]+m[0]
-            dy = bbox[1]*s[1]+m[1]
+                dx = bbox[0]*s[0]+m[0]
+                dy = bbox[1]*s[1]+m[1]
 
-            width = roi[2] - roi[0]
-            height = roi[3] - roi[1]
+                width = roi[2] - roi[0]
+                height = roi[3] - roi[1]
 
-            center_x = width/2 + dx*width
-            center_y = height/2 + dy*height
+                center_x = width/2 + dx*width
+                center_y = height/2 + dy*height
 
-            circle=plt.Circle((center_x+roi[0],center_y+roi[1]),10,color='b')
-            circles.append(circle)
-            plt.gca().add_patch(circles[j-1])
+                circle=plt.Circle((center_x+roi[0],center_y+roi[1]),10,color='b')
+                circles.append(circle)
+                plt.gca().add_patch(circle)
 
-        plt.gca().add_patch(rect)
-        #plt.show()
         plt.savefig('blobs/'+names[i])
 
         rect.remove()
