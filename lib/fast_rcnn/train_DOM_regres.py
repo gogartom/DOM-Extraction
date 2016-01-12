@@ -14,6 +14,7 @@ from utils.timer import Timer
 import numpy as np
 import numpy.matlib
 import os
+import sys
 
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
@@ -194,6 +195,7 @@ class SolverWrapper(object):
         precision, aver_IOU = test_net(net, self.imdb_test, self.imdb_test_name)
         print 'Precision:', 'Price:',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
         print 'Average IOU:', 'Price:',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+        sys.stdout.flush()
 
     def train_model(self, max_iters):
         """Network training loop."""
