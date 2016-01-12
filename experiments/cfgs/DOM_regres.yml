@@ -13,3 +13,5 @@ TRAIN:
   CROP_TOP: True
 TEST:
   BBOX_REG: True
+  SCALES: !!python/tuple [1600]
+  CROP_TOP: True

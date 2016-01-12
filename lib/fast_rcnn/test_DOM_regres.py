@@ -271,7 +271,11 @@ def test_net(net, imdb, imdb_name, num_images=300):
     for i in xrange(num_images):
         ind = indices[i]
         im = cv2.imread(imdb.image_path_at(ind))
-    
+
+        # CROP TOP OF IMAGE
+        if cfg.TEST.CROP_TOP:
+            im = im[:cfg.TEST.CROP_HEIGHT,:,:]
+
         #-- get boxes from network
         #dim_w = 1920-1
         #dim_h = 1080-1
