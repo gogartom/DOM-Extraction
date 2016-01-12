@@ -248,8 +248,30 @@ def apply_nms(all_boxes, thresh):
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
     return nms_boxes
 
+def save_image(im, boxes, ind,images_dir):
+    #plt.imshow(im)
+    
+    fig = plt.figure(1,frameon=False)
+    fig.set_size_inches(im.shape[1],im.shape[0])
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    ax.imshow(im, aspect='auto')
 
-def test_net(net, imdb, imdb_name, num_images=300):
+    for k in xrange(len(boxes)):
+        for j in xrange(1,4):
+            bbox = boxes[k,j*4:j*4+4]
+            rect = plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0],
+                bbox[3] - bbox[1], fill=False,
+                edgecolor='r', linewidth=250)
+
+            ax.add_patch(rect)
+
+    fig.savefig(images_dir+'/im_'+str(ind)+'.png', dpi=1)
+    plt.close(1)
+
+
+def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
     """Test a Fast R-CNN network on an image database."""
     total_num_images = len(imdb.image_index)
     
@@ -258,9 +280,11 @@ def test_net(net, imdb, imdb_name, num_images=300):
     #if not os.path.exists(output_dir):
     #    os.makedirs(output_dir)
 
-    images_dir = 'test_DOM_regres_'+imdb_name
-    if not os.path.exists(images_dir):
-        os.makedirs(images_dir)
+    # if we want to save images
+    if save_images:
+        images_dir = 'test_DOM_regres_'+imdb_name
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
 
     roidb = imdb.roidb
     indices = np.random.randint(low=0,high=total_num_images,size=num_images)
@@ -268,6 +292,7 @@ def test_net(net, imdb, imdb_name, num_images=300):
     IOUs = np.zeros((num_images,3),dtype='float32')
     matches = np.zeros((num_images,3),dtype='float32')
 
+    # for each image
     for i in xrange(num_images):
         ind = indices[i]
         im = cv2.imread(imdb.image_path_at(ind))
@@ -287,12 +312,14 @@ def test_net(net, imdb, imdb_name, num_images=300):
         #        proposals.append([x0, y0, x0+w, y0+h])
     
         boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
-        results_per_class = get_results(boxes,roidb[ind])        
+        metrics_per_class = get_results(boxes,roidb[ind])        
         
         for j in xrange(0,3):
-            IOUs[i,j] = results_per_class[j][0]
-            matches[i,j] = results_per_class[j][1]
-
+            IOUs[i,j] = metrics_per_class[j][0]
+            matches[i,j] = metrics_per_class[j][1]
+    
+        if save_images:
+            save_image(im, boxes, i, images_dir)
 
         #boxes = im_detect(net, im, np.array(proposals))
 
