@@ -291,6 +291,7 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
 
     IOUs = np.zeros((num_images,3),dtype='float32')
     matches = np.zeros((num_images,3),dtype='float32')
+    dists = np.zeros((num_images,3),dtype='float32')
 
     # for each image
     for i in xrange(num_images):
@@ -317,7 +318,8 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
         for j in xrange(0,3):
             IOUs[i,j] = metrics_per_class[j][0]
             matches[i,j] = metrics_per_class[j][1]
-    
+            dists[i,j] = metrics_per_class[j][2]    
+
         if save_images:
             save_image(im, boxes, i, images_dir)
 
@@ -344,4 +346,4 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
         #    rect.remove()
 
 
-    return np.mean(matches, axis=0), np.mean(IOUs, axis=0)
+    return np.mean(matches, axis=0), np.mean(IOUs, axis=0), np.mean(dists, axis=0)

@@ -33,7 +33,7 @@ def parse_args():
                         default='models/CaffeNet_DOM_regres/test.prototxt', type=str)
     parser.add_argument('--net', dest='caffemodel',
                         help='model to test',
-                        default='output/eshops/eshops/master_train_2016-01-12_15:55:02/iters/caffenet_DOM_regres_iter_3000.caffemodel', type=str)
+                        default='output/eshops/eshops/master_train_2016-01-12_15:55:02/iters/caffenet_DOM_regres_iter_4000.caffemodel', type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default='experiments/cfgs/DOM_regres.yml', type=str)
     parser.add_argument('--wait', dest='wait',
@@ -82,11 +82,14 @@ if __name__ == '__main__':
     imdb = datasets.eshops(args.imdb_name)
     imdb.competition_mode(args.comp_mode)
 
-    precision, aver_IOU = test_net(net, imdb, args.imdb_name, num_images=100, save_images=True)
+    precision, aver_IOU, aver_dists = test_net(net, imdb, args.imdb_name, num_images=100, save_images=True)
     print '======================='
     print 'Precision:'
     print 'Price',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
     print '======================='
     print 'Average IOU:'
     print 'Price',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+    print '======================='
+    print 'Average Distance:'
+    print 'Price',aver_dists[0],'| Main image:',aver_dists[1],'| Name:', aver_dists[2]
     print '======================='

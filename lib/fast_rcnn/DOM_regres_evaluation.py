@@ -2,6 +2,7 @@ import sys
 import cPickle
 import numpy as np
 import numpy.matlib as npmat
+from numpy import linalg as LA
 import json
 import datasets
 
@@ -50,6 +51,18 @@ def calculate_iou_with_matrix(pred_box, dom_elements):
     
     return res
 
+def centers_distance(gt_box, pred_box):
+    cent_x_gt = gt_box[0]+((gt_box[2]-gt_box[0])/2)
+    cent_y_gt = gt_box[1]+((gt_box[3]-gt_box[1])/2)
+
+    cent_x_pred = pred_box[0]+((pred_box[2]-pred_box[0])/2)
+    cent_y_pred = pred_box[1]+((pred_box[3]-pred_box[1])/2)
+
+    cent_gt = np.array([cent_x_gt, cent_y_gt],dtype=np.float32)
+    cent_pred = np.array([cent_x_pred, cent_y_pred],dtype=np.float32)
+
+    dist = LA.norm(cent_gt-cent_pred)
+    return dist
 
 def get_results(pred_boxes,roidb):
     
@@ -61,6 +74,9 @@ def get_results(pred_boxes,roidb):
     non_gt_indices = np.squeeze(np.asarray(np.where(max_overlaps!=1.0)[0]))
     other_boxes = roidb['boxes'][non_gt_indices,:]
 
+    gt_boxes = gt_boxes.astype(np.float32)
+    other_boxes = other_boxes.astype(np.float32)
+
     # For each class get results
     class_results = []
     for i in xrange(1,4):
@@ -68,7 +84,10 @@ def get_results(pred_boxes,roidb):
         ind = np.where(gt_classes==i)
         gt_box = np.squeeze(gt_boxes[ind])
         pred_box = pred_boxes[0,i*4:i*4+4]
-        
+
+        # Compute distance of centers
+        dist = centers_distance(gt_box, pred_box)
+
         # Compute iou of GT and others
         gt_iou = calculate_iou_with_matrix(pred_box,gt_box)[0,0]
         others_iou = calculate_iou_with_matrix(pred_box,other_boxes)
@@ -78,8 +97,7 @@ def get_results(pred_boxes,roidb):
             chosen = 1
         else:
             chosen = 0
-
-        class_results.append((gt_iou,chosen))
+        class_results.append((gt_iou,chosen,dist))
     
     return class_results
 

@@ -192,9 +192,10 @@ class SolverWrapper(object):
         net = caffe.Net('models/CaffeNet_DOM_regres/test.prototxt', filename, caffe.TEST)
         net.name = os.path.splitext(os.path.basename(filename))[0]
 
-        precision, aver_IOU = test_net(net, self.imdb_test, self.imdb_test_name)
+        precision, aver_IOU, aver_dist = test_net(net, self.imdb_test, self.imdb_test_name)
         print 'Precision:', 'Price:',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
-        print 'Average IOU:', 'Price:',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+        print 'Average_IOU:', 'Price:',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
+        print 'Average_Distance:', 'Price:',aver_dist[0],'| Main image:',aver_dist[1],'| Name:', aver_dist[2]
         sys.stdout.flush()
 
     def train_model(self, max_iters):
