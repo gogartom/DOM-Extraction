@@ -24,9 +24,10 @@ def get_minibatch(roidb, num_classes, means, stds):
     random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
                                     size=num_images)
 
+
     # Get the input image blob, formatted for caffe
     im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
-
+   
     # Now, build the region of interest and label blobs
     rois_blob = np.zeros((0, 5), dtype=np.float32)
     labels_blob = np.zeros((0), dtype=np.float32)
@@ -172,13 +173,19 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, 
         im = im[:, :, (2, 1, 0)]
         im = im.astype(np.uint8)
 
-        plt.imshow(im)
+        fig = plt.figure(1,frameon=False)
+        fig.set_size_inches(im.shape[1],im.shape[0])
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(im, aspect='auto')
+
+        # add main box
         rect = plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
                           roi[3] - roi[1], fill=False,
-                          edgecolor='r', linewidth=3)
-        plt.gca().add_patch(rect)
-
-        
+                          edgecolor='r', linewidth=120)
+        ax.add_patch(rect)
+     
         # show bbox regression
         circles = []
         for j in xrange(1,4):
@@ -198,10 +205,12 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, 
 
                 circle=plt.Circle((center_x+roi[0],center_y+roi[1]),10,color='b')
                 circles.append(circle)
-                plt.gca().add_patch(circle)
+                ax.add_patch(circle)
 
-        plt.savefig('blobs/'+str(i)+'_'+names[i])
+        fig.savefig('blobs/'+str(i)+'_'+names[i], dpi=1)
+        plt.close(1)
 
+        # remove patches
         rect.remove()
         for circ in circles:
             circ.remove()
