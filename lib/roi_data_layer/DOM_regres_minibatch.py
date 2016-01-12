@@ -93,6 +93,10 @@ def _get_image_blob(roidb, scale_inds):
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
 
+        # Crop upper part of the page
+        if cfg.TRAIN.CROP_TOP:
+            im = im[:cfg.TRAIN.CROP_HEIGHT,:,:]
+       
         # Change HUE randomly
         if cfg.TRAIN.CHANGE_HUE:
             hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 

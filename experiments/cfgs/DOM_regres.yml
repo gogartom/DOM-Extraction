@@ -9,5 +9,7 @@ TRAIN:
   VIS_MINIBATCH: False
   HIDE_OTHERS: True
   SINGLE_CLASS_BOXES: True
+  SCALES: !!python/tuple [800,1100,1400,1600]
+  CROP_TOP: True
 TEST:
   BBOX_REG: True

@@ -38,7 +38,7 @@ __C.TRAIN = edict()
 __C.TRAIN.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
+__C.TRAIN.MAX_SIZE = 5000
 
 # Images to use per minibatch
 __C.TRAIN.IMS_PER_BATCH = 2
@@ -78,10 +78,15 @@ __C.TRAIN.SNAPSHOT_INFIX = ''
 # So far I haven't found this useful; likely more engineering work is required
 __C.TRAIN.USE_PREFETCH = False
 
+__C.TRAIN.CROP_TOP = False
+__C.TRAIN.CROP_HEIGHT = 2000
+
 __C.TRAIN.CHANGE_HUE = True
 
 __C.TRAIN.VIS_MINIBATCH = False
+
 __C.TRAIN.SINGLE_CLASS_BOXES = False
+
 __C.TRAIN.BOXES_PER_IM = 5
 
 __C.TRAIN.HIDE_OTHERS = False
@@ -98,7 +103,7 @@ __C.TEST = edict()
 __C.TEST.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
+__C.TEST.MAX_SIZE = 5000
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
