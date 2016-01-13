@@ -25,12 +25,15 @@ class SolverWrapper(object):
     use to unnormalize the learned bounding-box regression weights.
     """
 
-    def __init__(self, solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
+    def __init__(self, solver_prototxt, roidb, imdb_train, imdb_train_name, imdb_test, imdb_test_name, output_dir,
                  pretrained_model=None):
         """Initialize the SolverWrapper."""
         self.output_dir = output_dir
         self.imdb_test = imdb_test
         self.imdb_test_name = imdb_test_name
+
+        self.imdb_train = imdb_train
+        self.imdb_train_name = imdb_train_name
 
         print 'Computing bounding-box regression targets...'
         #self.bbox_means, self.bbox_stds = \
@@ -188,14 +191,21 @@ class SolverWrapper(object):
         filename = str(os.path.join(iters_dir, filename))
 
         print 'Testing net using net at:', filename        
+
         # TODO: add test.prototxt to params
         net = caffe.Net('models/CaffeNet_DOM_regres/test.prototxt', filename, caffe.TEST)
         net.name = os.path.splitext(os.path.basename(filename))[0]
 
-        precision, aver_IOU, aver_dist = test_net(net, self.imdb_test, self.imdb_test_name)
-        print 'Precision:', 'Price:',precision[0],'| Main image:',precision[1],'| Name:', precision[2]
-        print 'Average_IOU:', 'Price:',aver_IOU[0],'| Main image:',aver_IOU[1],'| Name:', aver_IOU[2]
-        print 'Average_Distance:', 'Price:',aver_dist[0],'| Main image:',aver_dist[1],'| Name:', aver_dist[2]
+        test_precision, test_aver_IOU, test_aver_dist = test_net(net, self.imdb_test, self.imdb_test_name)
+        print 'TEST_Precision:', 'Price:',test_precision[0],'| Main image:',test_precision[1],'| Name:', test_precision[2]
+        print 'TEST_Average_IOU:', 'Price:',test_aver_IOU[0],'| Main image:',test_aver_IOU[1],'| Name:', test_aver_IOU[2]
+        print 'TEST_Average_Distance:', 'Price:',test_aver_dist[0],'| Main image:',test_aver_dist[1],'| Name:', test_aver_dist[2]
+
+        train_precision, train_aver_IOU, train_aver_dist = test_net(net, self.imdb_train, self.imdb_train_name)
+        print 'TRAIN_Precision:', 'Price:',train_precision[0],'| Main image:',train_precision[1],'| Name:', train_precision[2]
+        print 'TRAIN_Average_IOU:', 'Price:',train_aver_IOU[0],'| Main image:',train_aver_IOU[1],'| Name:', train_aver_IOU[2]
+        print 'TRAIN_Average_Distance:', 'Price:',train_aver_dist[0],'| Main image:',train_aver_dist[1],'| Name:', train_aver_dist[2]
+
         sys.stdout.flush()
 
     def train_model(self, max_iters):
@@ -362,10 +372,10 @@ def get_training_roidb(imdb):
 
     return imdb.roidb
 
-def train_net(solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
+def train_net(solver_prototxt, roidb, imdb_train, imdb_train_name, imdb_test, imdb_test_name, output_dir,
               pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
-    sw = SolverWrapper(solver_prototxt, roidb, imdb_test, imdb_test_name, output_dir,
+    sw = SolverWrapper(solver_prototxt, roidb, imdb_train, imdb_train_name, imdb_test, imdb_test_name, output_dir,
                        pretrained_model=pretrained_model)
 
     print 'Solving...'
