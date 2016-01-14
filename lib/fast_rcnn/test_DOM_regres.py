@@ -347,3 +347,70 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
 
 
     return np.mean(matches, axis=0), np.mean(IOUs, axis=0), np.mean(dists, axis=0)
+
+
+def show_net_local_performance(net, imdb, imdb_name, num_images=100):
+    total_num_images = len(imdb.image_index)
+
+    images_dir = 'local_performance_'+imdb_name
+    if not os.path.exists(images_dir):
+        os.makedirs(images_dir)
+
+    roidb = imdb.gt_roidb()
+    indices = np.random.randint(low=0,high=total_num_images,size=num_images)
+
+    for i in xrange(num_images):
+        ind = indices[i]
+        print imdb.image_path_at(ind)
+        im = cv2.imread(imdb.image_path_at(ind))
+        im = im[:2000,:,:]
+
+        gt_boxes = roidb[ind]['boxes']
+        gt_classes = roidb[ind]['gt_classes'][0:3]
+        for j in xrange(1,4):
+
+            ind_gt = np.where(gt_classes==j)[0]
+            gt_box = np.squeeze(gt_boxes[ind_gt])
+            
+            box = []
+            box.append(max(0,gt_box[0]-np.random.randint(low = 50, high = 400)))
+            box.append(max(0,gt_box[1]-np.random.randint(low = 50, high = 400)))
+            box.append(min(1920,gt_box[2]+np.random.randint(low = 50, high = 400)))
+            box.append(min(2000,gt_box[3]+np.random.randint(low = 50, high = 400)))
+           
+            pred_boxes = im_detect(net, im, np.array([box]))
+            pred_box = pred_boxes[0,j*4:j*4+4]
+
+            #print 'class', j
+            #print 'gt_box', gt_box
+            #print 'box to network', box
+            #print 'pred box', pred_box
+            
+            pred_box[0] = pred_box[0]-box[0]
+            pred_box[2] = pred_box[2]-box[0]
+            pred_box[1] = pred_box[1]-box[1]
+            pred_box[3] = pred_box[3]-box[1]
+
+
+            #print 'pred box new', pred_box
+            #print '-------------'
+
+            im_small = im[box[1]:box[3],box[0]:box[2],:]
+
+            fig = plt.figure(1,frameon=False)
+            fig.set_size_inches(im_small.shape[1],im_small.shape[0])
+            ax = plt.Axes(fig, [0., 0., 1., 1.])
+            ax.set_axis_off()
+            fig.add_axes(ax)
+            ax.imshow(im_small, aspect='auto')
+
+            rect = plt.Rectangle((pred_box[0], pred_box[1]), pred_box[2] - pred_box[0],
+                pred_box[3] - pred_box[1], fill=False,
+                edgecolor='r', linewidth=350)
+    
+            #rect = plt.Rectangle((gt_box[0], gt_box[1]), 200, 200, fill=True,
+            #    edgecolor='r', linewidth=250)
+
+            ax.add_patch(rect)
+            fig.savefig(images_dir+'/im_'+str(ind)+'_'+str(j)+'.png', dpi=1)
+            plt.close(1)
