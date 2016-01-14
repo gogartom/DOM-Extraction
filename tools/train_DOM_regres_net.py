@@ -54,6 +54,9 @@ def parse_args():
     parser.add_argument('--imdb_test', dest='imdb_test_name',
                         help='dataset to test on',
                         default='master_not_seen_test', type=str)
+    parser.add_argument('--test_prototxt', dest='test_prototxt',
+                        help='Net definition for tests',
+                        default='models/CaffeNet_DOM_regres/test.prototxt', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -108,6 +111,6 @@ if __name__ == '__main__':
 
 
     train_net(args.solver, roidb, imdb, args.imdb_name, imdb_test, 
-              args.imdb_test_name, output_dir,
+              args.imdb_test_name, args.test_prototxt, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)
