@@ -373,10 +373,11 @@ def show_net_local_performance(net, imdb, imdb_name, num_images=100):
             gt_box = np.squeeze(gt_boxes[ind_gt])
             
             box = []
-            box.append(max(0,gt_box[0]-np.random.randint(low = 50, high = 400)))
-            box.append(max(0,gt_box[1]-np.random.randint(low = 50, high = 400)))
-            box.append(min(1920,gt_box[2]+np.random.randint(low = 50, high = 400)))
-            box.append(min(2000,gt_box[3]+np.random.randint(low = 50, high = 400)))
+            max_increase = 100
+            box.append(max(0,gt_box[0]-np.random.randint(low = 50, high = max_increase)))
+            box.append(max(0,gt_box[1]-np.random.randint(low = 50, high = max_increase)))
+            box.append(min(1920,gt_box[2]+np.random.randint(low = 50, high = max_increase)))
+            box.append(min(2000,gt_box[3]+np.random.randint(low = 50, high = max_increase)))
            
             pred_boxes = im_detect(net, im, np.array([box]))
             pred_box = pred_boxes[0,j*4:j*4+4]
