@@ -331,6 +331,9 @@ def get_DOM_regres_training_roidb(imdb):
 
         # add image
         my_roidb[i]['image'] = imdb.image_path_at(i)
+
+        # add text_map
+        my_roidb[i]['text_map'] = imdb.text_map_path_at(i)        
         
         # copy gt boxes and their classes
         my_roidb[i]['gt_elements'] = gt_roidb[i]['boxes']

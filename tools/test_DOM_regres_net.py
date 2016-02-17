@@ -30,10 +30,10 @@ def parse_args():
                         default=0, type=int)
     parser.add_argument('--def', dest='prototxt',
                         help='prototxt file defining the network',
-                        default='models/CaffeNet_DOM_regres/test.prototxt', type=str)
+                        default='models/TextMap_v1/test.prototxt', type=str)
     parser.add_argument('--net', dest='caffemodel',
                         help='model to test',
-                        default='output/eshops/eshops/master_train_2016-01-12_15:55:02/iters/caffenet_DOM_regres_iter_4000.caffemodel', type=str)
+                        default='output/eshops/eshops/master_train_2016-02-15_09:36:39/iters/caffenet_DOM_regres_iter_1.caffemodel', type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default='experiments/cfgs/DOM_regres.yml', type=str)
     parser.add_argument('--wait', dest='wait',
@@ -41,7 +41,7 @@ def parse_args():
                         default=True, type=bool)
     parser.add_argument('--imdb', dest='imdb_name',
                         help='dataset to test',
-                        default='master_not_seen_test', type=str)
+                        default='4home', type=str)
     parser.add_argument('--comp', dest='comp_mode', help='competition mode',
                         action='store_true')
     parser.add_argument('--set', dest='set_cfgs',

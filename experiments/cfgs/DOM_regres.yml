@@ -5,13 +5,13 @@ TRAIN:
   SNAPSHOT_ITERS: 250
   IMS_PER_BATCH: 2
   BOXES_PER_IM: 20
-  USE_PREFETCH: True
+  USE_PREFETCH: False
   VIS_MINIBATCH: False
   HIDE_OTHERS: True
   SINGLE_CLASS_BOXES: True
-  SCALES: !!python/tuple [800,1100,1400,1600]
+  SCALES: !!python/tuple [1400,1600,1920]
   CROP_TOP: True
 TEST:
   BBOX_REG: True
-  SCALES: !!python/tuple [1600]
+  SCALES: !!python/tuple [1920]
   CROP_TOP: True

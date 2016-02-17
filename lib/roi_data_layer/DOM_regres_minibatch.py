@@ -11,13 +11,12 @@ import numpy as np
 import numpy.random as npr
 import cv2
 from fast_rcnn.config import cfg
-from utils.blob import prep_im_for_blob, im_list_to_blob
+from utils.blob import prep_im_for_blob, im_list_to_blob, load_text_map
 import time
 
 def get_minibatch(roidb, num_classes, means, stds):
     """Given a roidb, construct a minibatch sampled from it."""
 
-    #start = time.time()
     num_images = len(roidb)
 
     # Sample random scales to use for each image in this batch
@@ -26,23 +25,35 @@ def get_minibatch(roidb, num_classes, means, stds):
 
 
     # Get the input image blob, formatted for caffe
-    im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+    im_blob, im_scales, txt_blob, txt_scales = _get_data_blobs(roidb, random_scale_inds)
+
    
     # Now, build the region of interest and label blobs
-    rois_blob = np.zeros((0, 5), dtype=np.float32)
+    im_rois_blob = np.zeros((0, 5), dtype=np.float32)
+    txt_rois_blob = np.zeros((0, 5), dtype=np.float32)
+
     labels_blob = np.zeros((0), dtype=np.float32)
     bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
     bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
     names = []
     for im_i in xrange(num_images):
-        im_rois, bbox_targets, bbox_loss \
+        rois, bbox_targets, bbox_loss \
             = _sample_rois(roidb[im_i], num_classes)
 
-        # Add to RoIs blob
-        rois = _project_im_rois(im_rois, im_scales[im_i])
-        batch_ind = im_i * np.ones((rois.shape[0], 1))
-        rois_blob_this_image = np.hstack((batch_ind, rois))
-        rois_blob = np.vstack((rois_blob, rois_blob_this_image))
+        # project Image and Text RoIs
+        im_rois = _project_im_rois(rois, im_scales[im_i])
+        txt_rois = _project_im_rois(rois, txt_scales[im_i])
+ 
+        # get image indices
+        batch_ind = im_i * np.ones((im_rois.shape[0], 1))
+             
+        # add to image blob
+        im_rois_blob_this_image = np.hstack((batch_ind, im_rois))
+        im_rois_blob = np.vstack((im_rois_blob, im_rois_blob_this_image))
+
+        # add to txt blob
+        txt_rois_blob_this_image = np.hstack((batch_ind, txt_rois))
+        txt_rois_blob = np.vstack((txt_rois_blob, txt_rois_blob_this_image))
 
         # Add to labels, bbox targets, and bbox loss blobs
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
@@ -55,10 +66,13 @@ def get_minibatch(roidb, num_classes, means, stds):
 
     if cfg.TRAIN.VIS_MINIBATCH:
         # For debug visualizations
-        _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, means, stds)
+        _vis_minibatch(im_blob, im_rois_blob, bbox_targets_blob, bbox_loss_blob,names, means, stds)
+        _vis_map_minibatch(txt_blob, txt_rois_blob,bbox_targets_blob, bbox_loss_blob, names, means, stds)
 
-    blobs = {'data': im_blob,
-             'rois': rois_blob,
+    blobs = {'im_data': im_blob,
+             'txt_data': txt_blob,
+             'im_rois': im_rois_blob,
+             'txt_rois': txt_rois_blob,
              'bbox_targets' : bbox_targets_blob,
              'bbox_loss_weights' : bbox_loss_blob}
 
@@ -83,20 +97,23 @@ def _sample_rois(roidb, num_classes):
 
     return rois, bbox_targets, bbox_loss_weights
 
-def _get_image_blob(roidb, scale_inds):
+def _get_data_blobs(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified
     scales.
     """
     num_images = len(roidb)
     processed_ims = []
     im_scales = []
+    processed_txt_maps = []
+    txt_scales = []
+
     for i in xrange(num_images):
         im = cv2.imread(roidb[i]['image'])
-
+       
         # Crop upper part of the page
         if cfg.TRAIN.CROP_TOP:
             im = im[:cfg.TRAIN.CROP_HEIGHT,:,:]
-       
+
         # Change HUE randomly
         if cfg.TRAIN.CHANGE_HUE:
             hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV) 
@@ -106,27 +123,48 @@ def _get_image_blob(roidb, scale_inds):
             hsv2[:,:,0] += add_matrix
             im = cv2.cvtColor(hsv2, cv2.COLOR_HSV2BGR)
 
-        # Hide some of non-overlaping elements
+        # Sample some of non-overlaping elements to hide them
         # We should get rid of for cycle
+        hide_rois_elements = []
         if cfg.TRAIN.HIDE_OTHERS:
             elements = roidb[i]['non_overlap_elements']
             for j in xrange(elements.shape[0]):
                 if np.random.uniform()<cfg.TRAIN.HIDE_RATIO:
-                    im[elements[j,1]:elements[j,3],elements[j,0]:elements[j,2],:] = 255
+                    hide_rois_elements.append(np.squeeze(np.asarray(elements[j,:])))
+
+        # Hide sampled elements        
+        for elem in hide_rois_elements:
+            im[elem[1]:elem[3],elem[0]:elem[2],:] = 255
 
         # Fliping
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
        
+        # Image scaling
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
         im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                                         cfg.TRAIN.MAX_SIZE)
+
+        # Append Image       
         im_scales.append(im_scale)
         processed_ims.append(im)
 
+        # Prepare text map
+        this_map_scale = cfg.TRAIN.TEXT_FEATURES_SCALE*im_scale        
+
+        if cfg.TRAIN.CROP_TOP:
+            map = load_text_map(roidb[i]['text_map'], this_map_scale, hide_rois_elements, cfg.TRAIN.CROP_HEIGHT)
+        else:
+            map = load_text_map(roidb[i]['text_map'], this_map_scale, hide_rois_elements)
+
+        txt_scales.append(this_map_scale)
+        processed_txt_maps.append(map)
+
     # Create a blob to hold the input images
-    blob = im_list_to_blob(processed_ims)
-    return blob, im_scales
+    im_blob = im_list_to_blob(processed_ims)
+    txt_blob = im_list_to_blob(processed_txt_maps)
+    
+    return im_blob, im_scales, txt_blob, txt_scales
 
 def _project_im_rois(im_rois, im_scale_factor):
     """Project image RoIs into the rescaled training image."""
@@ -211,7 +249,62 @@ def _vis_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, 
                 circles.append(circle)
                 ax.add_patch(circle)
 
-        fig.savefig('blobs/'+str(i)+'_'+names[i], dpi=1)
+        fig.savefig('image_blobs/'+str(i)+'_'+names[i], dpi=1)
+        plt.close(1)
+
+        # remove patches
+        rect.remove()
+        for circ in circles:
+            circ.remove()
+
+def _vis_map_minibatch(im_blob, rois_blob, bbox_targets_blob, bbox_loss_blob,names, means, stds):
+    """Visualize a mini-batch for debugging."""
+    import matplotlib.pyplot as plt
+   
+    for i in xrange(rois_blob.shape[0]):
+        rois = rois_blob[i, :]
+        im_ind = rois[0]
+        roi = rois[1:]
+        im = im_blob[im_ind, 29, :, :]
+        #im += cfg.PIXEL_MEANS
+        #im = im[:, :, (2, 1, 0)]
+        #im = im.astype(np.uint8)
+
+        fig = plt.figure(1,frameon=False)
+        fig.set_size_inches(im.shape[1],im.shape[0])
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.matshow(im, aspect='auto')
+
+        # add main box
+        rect = plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
+                          roi[3] - roi[1], fill=False,
+                          edgecolor='r', linewidth=120)
+        ax.add_patch(rect)
+     
+        # show bbox regression
+        circles = []
+        for j in xrange(1,4):
+            if bbox_loss_blob[i, j*4:j*4+4].all():
+                bbox = bbox_targets_blob[i, j*4:j*4+4]
+                m = means[j*4:j*4+4]
+                s = stds[j*4:j*4+4]
+
+                dx = bbox[0]*s[0]+m[0]
+                dy = bbox[1]*s[1]+m[1]
+
+                width = roi[2] - roi[0]
+                height = roi[3] - roi[1]
+
+                center_x = width/2 + dx*width
+                center_y = height/2 + dy*height
+
+                circle=plt.Circle((center_x+roi[0],center_y+roi[1]),5,color='b')
+                circles.append(circle)
+                ax.add_patch(circle)
+
+        fig.savefig('text_blobs/'+str(i)+'_'+names[i], dpi=1)
         plt.close(1)
 
         # remove patches

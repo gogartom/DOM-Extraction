@@ -17,7 +17,7 @@ import caffe
 from utils.cython_nms import nms
 import cPickle
 import heapq
-from utils.blob import im_list_to_blob
+from utils.blob import im_list_to_blob, load_text_map
 import os
 import matplotlib.pyplot as plt
 
@@ -32,8 +32,14 @@ def _get_image_blob(im):
         im_scale_factors (list): list of image scales (relative to im) used
             in the image pyramid
     """
+
+    # CROP TOP OF IMAGE
+    if cfg.TEST.CROP_TOP:
+        im = im[:cfg.TEST.CROP_HEIGHT,:,:]
+
     im_orig = im.astype(np.float32, copy=True)
     im_orig -= cfg.PIXEL_MEANS
+
 
     im_shape = im_orig.shape
     im_size_min = np.min(im_shape[0:2])
@@ -52,10 +58,28 @@ def _get_image_blob(im):
         im_scale_factors.append(im_scale)
         processed_ims.append(im)
 
+
     # Create a blob to hold the input images
     blob = im_list_to_blob(processed_ims)
 
     return blob, np.array(im_scale_factors)
+
+def _get_txt_blob(txt_map, txt_scale_factors):
+
+    processed_txt_maps = []
+    txt_scales = []
+
+    for scale in txt_scale_factors:
+
+        if cfg.TEST.CROP_TOP:
+            map = load_text_map(txt_map, scale, crop_height=cfg.TRAIN.CROP_HEIGHT)
+        else:
+            map = load_text_map(txt_map, scale)
+
+        processed_txt_maps.append(map)
+    txt_blob = im_list_to_blob(processed_txt_maps)
+
+    return txt_blob
 
 def _get_rois_blob(im_rois, im_scale_factors):
     """Converts RoIs into network inputs.
@@ -99,11 +123,16 @@ def _project_im_rois(im_rois, scales):
 
     return rois, levels
 
-def _get_blobs(im, rois):
+def _get_blobs(im, txt_map, rois):
     """Convert an image and RoIs within that image into network inputs."""
     blobs = {'data' : None, 'rois' : None}
-    blobs['data'], im_scale_factors = _get_image_blob(im)
-    blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
+    blobs['im_data'], im_scale_factors = _get_image_blob(im)
+    blobs['im_rois'] = _get_rois_blob(rois, im_scale_factors)
+
+    txt_scale_factors = [fact*cfg.TEST.TEXT_FEATURES_SCALE for fact in im_scale_factors]
+    blobs['txt_data'] = _get_txt_blob(txt_map, txt_scale_factors)
+    blobs['txt_rois'] = _get_rois_blob(rois, np.array(txt_scale_factors))
+
     return blobs, im_scale_factors
 
 def _bbox_pred(boxes, box_deltas):
@@ -153,7 +182,7 @@ def _clip_boxes(boxes, im_shape):
     boxes[:, 3::4] = np.minimum(boxes[:, 3::4], im_shape[0] - 1)
     return boxes
 
-def im_detect(net, im, boxes):
+def im_detect(net, im, txt_map, boxes):
     """Detect object classes in an image given object proposals.
 
     Arguments:
@@ -166,7 +195,7 @@ def im_detect(net, im, boxes):
             background as object category 0)
         boxes (ndarray): R x (4*K) array of predicted bounding boxes
     """
-    blobs, unused_im_scale_factors = _get_blobs(im, boxes)
+    blobs, unused_im_scale_factors = _get_blobs(im, txt_map, boxes)
 
     # When mapping from image ROIs to feature map ROIs, there's some aliasing
     # (some distinct image ROIs get mapped to the same feature ROI).
@@ -181,10 +210,16 @@ def im_detect(net, im, boxes):
     #    boxes = boxes[index, :]
 
     # reshape network inputs
-    net.blobs['data'].reshape(*(blobs['data'].shape))
-    net.blobs['rois'].reshape(*(blobs['rois'].shape))
-    blobs_out = net.forward(data=blobs['data'].astype(np.float32, copy=False),
-                            rois=blobs['rois'].astype(np.float32, copy=False))
+    net.blobs['im_data'].reshape(*(blobs['im_data'].shape))
+    net.blobs['im_rois'].reshape(*(blobs['im_rois'].shape))
+    net.blobs['txt_data'].reshape(*(blobs['txt_data'].shape))
+    net.blobs['txt_rois'].reshape(*(blobs['txt_rois'].shape))
+
+    blobs_out = net.forward(im_data=blobs['im_data'].astype(np.float32, copy=False),
+                            txt_data=blobs['txt_data'].astype(np.float32, copy=False),
+                            im_rois=blobs['im_rois'].astype(np.float32, copy=False),
+                            txt_rois=blobs['txt_rois'].astype(np.float32, copy=False))
+
     #if cfg.TEST.SVM:
     #    # use the raw scores before softmax under the assumption they
     #    # were trained as linear SVMs
@@ -296,11 +331,13 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
     # for each image
     for i in xrange(num_images):
         ind = indices[i]
+    
         im = cv2.imread(imdb.image_path_at(ind))
-
-        # CROP TOP OF IMAGE
-        if cfg.TEST.CROP_TOP:
-            im = im[:cfg.TEST.CROP_HEIGHT,:,:]
+        txt_map = imdb.text_map_path_at(ind)
+        # Add other layers
+        #im_with_text_map = np.zeros((im.shape[0],im.shape[1],131))
+        #im_with_text_map[:,:,0:3] = im
+        #im = im_with_text_map        
 
         #-- get boxes from network
         #dim_w = 1920-1
@@ -312,7 +349,7 @@ def test_net(net, imdb, imdb_name, num_images=300,save_images=False):
         #    for y0 in np.linspace(0, dim_h-h, num = 2):
         #        proposals.append([x0, y0, x0+w, y0+h])
     
-        boxes = im_detect(net, im, np.array([[0, 0, 1920-1, 1000-1]]))
+        boxes = im_detect(net, im, txt_map, np.array([[0, 0, 1920-1, 1000-1]]))
         metrics_per_class = get_results(boxes,roidb[ind])        
         
         for j in xrange(0,3):

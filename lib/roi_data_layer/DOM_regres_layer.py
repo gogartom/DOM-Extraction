@@ -78,27 +78,40 @@ class DOMRegresDataLayer(caffe.Layer):
         self._num_classes = layer_params['num_classes']
 
         self._name_to_top_map = {
-            'data': 0,
-            'rois': 1,
-            'bbox_targets': 2,
-            'bbox_loss_weights': 3}
+            'im_data': 0,
+            'txt_data': 1,
+            'im_rois': 2,
+            'txt_rois' : 3,
+            'bbox_targets': 4,
+            'bbox_loss_weights': 5}
 
         # data blob: holds a batch of N images, each with 3 channels
         # The height and width (100 x 100) are dummy values
-        top[0].reshape(1, 3, 100, 100)
+        # top[0].reshape(1, 3, 100, 100)
+        top[0].reshape(1, 3, 100, 100)        
 
-        # rois blob: holds R regions of interest, each is a 5-tuple
+        # data blob: holds a batch of N text maps, each with 3 channels
+        # The height and width (100 x 100) are dummy values
+        # top[0].reshape(1, 3, 100, 100)
+        top[1].reshape(1, cfg.TRAIN.TEXT_FEATURES_COUNT, 100, 100) 
+
+        # im rois blob: holds R regions of interest, each is a 5-tuple
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
-        top[1].reshape(1, 5)
+        top[2].reshape(1, 5)
+
+        # text rois blob: holds R regions of interest, each is a 5-tuple
+        # (n, x1, y1, x2, y2) specifying an image batch index n and a
+        # rectangle (x1, y1, x2, y2)
+        top[3].reshape(1, 5)
 
         # bbox_targets blob: R bounding-box regression targets with 4
         # targets per class
-        top[2].reshape(1, self._num_classes * 4)
+        top[4].reshape(1, self._num_classes * 4)
 
         # bbox_loss_weights blob: At most 4 targets per roi are active;
         # thisbinary vector sepcifies the subset of active targets
-        top[3].reshape(1, self._num_classes * 4)
+        top[5].reshape(1, self._num_classes * 4)
 
 
     def forward(self, bottom, top):

@@ -35,10 +35,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
     parser.add_argument('--gpu', dest='gpu_id',
                         help='GPU device id to use [0]',
-                        default=0, type=int)
+                        default=0, type=int)  
     parser.add_argument('--solver', dest='solver',
                         help='solver prototxt',
-                        default='models/CaffeNet_DOM_regres/solver.prototxt', type=str)
+                        default='models/TextMap_only/solver.prototxt', type=str)
     parser.add_argument('--iters', dest='max_iters',
                         help='number of iterations to train',
                         default=40000, type=int)
@@ -56,7 +56,7 @@ def parse_args():
                         default='master_not_seen_test', type=str)
     parser.add_argument('--test_prototxt', dest='test_prototxt',
                         help='Net definition for tests',
-                        default='models/CaffeNet_DOM_regres/test.prototxt', type=str)
+                        default='models/TextMap_only/test.prototxt', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -95,7 +95,6 @@ if __name__ == '__main__':
     if args.gpu_id is not None:
         caffe.set_device(args.gpu_id)
 
-    
     imdb = datasets.eshops(args.imdb_name)
     imdb_test = datasets.eshops(args.imdb_test_name)
 

@@ -1,0 +1,148 @@
+name: "CaffeNet"
+layer {
+  name: 'data'
+  type: 'Python'
+  top: 'im_data'
+  top: 'txt_data'
+  top: 'im_rois'
+  top: 'txt_rois'
+  top: 'bbox_targets'
+  top: 'bbox_loss_weights'
+  python_param {
+    module: 'roi_data_layer.DOM_regres_layer'
+    layer: 'DOMRegresDataLayer'
+    param_str: "'num_classes': 4"
+  }
+}
+layer{
+  name: "txt_ignore"
+  type: "Silence"
+  bottom: "im_data"
+  bottom: "im_rois"
+}
+layer {
+  name: "txt_pool"
+  type: "ROIPooling"
+  bottom: "txt_data"
+  bottom: "txt_rois"
+  top: "txt_pool"
+  roi_pooling_param {
+    pooled_w: 24
+    pooled_h: 24
+    spatial_scale: 1.0 # 1
+  }
+}
+layer {
+  name: "DOM_fc6"
+  type: "InnerProduct"
+  bottom: "txt_pool"
+  top: "DOM_fc6"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 256
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu6"
+  type: "ReLU"
+  bottom: "DOM_fc6"
+  top: "DOM_fc6"
+}
+layer {
+  name: "drop6"
+  type: "Dropout"
+  bottom: "DOM_fc6"
+  top: "DOM_fc6"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "DOM_fc7"
+  type: "InnerProduct"
+  bottom: "DOM_fc6"
+  top: "DOM_fc7"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 256
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "relu7"
+  type: "ReLU"
+  bottom: "DOM_fc7"
+  top: "DOM_fc7"
+}
+layer {
+  name: "drop7"
+  type: "Dropout"
+  bottom: "DOM_fc7"
+  top: "DOM_fc7"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "bbox_pred"
+  type: "InnerProduct"
+  bottom: "DOM_fc7"
+  top: "bbox_pred"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 16
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "loss_bbox"
+  type: "SmoothL1Loss"
+  bottom: "bbox_pred"
+  bottom: "bbox_targets"
+  bottom: "bbox_loss_weights"
+  top: "loss_bbox"
+  loss_weight: 1
+}

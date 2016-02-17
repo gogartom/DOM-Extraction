@@ -81,6 +81,9 @@ __C.TRAIN.USE_PREFETCH = False
 __C.TRAIN.CROP_TOP = False
 __C.TRAIN.CROP_HEIGHT = 2000
 
+__C.TRAIN.TEXT_FEATURES_COUNT = 128
+__C.TRAIN.TEXT_FEATURES_SCALE = 0.125
+
 __C.TRAIN.CHANGE_HUE = True
 
 __C.TRAIN.VIS_MINIBATCH = False
@@ -100,7 +103,7 @@ __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (1600,)
+__C.TEST.SCALES = (1920,)
 
 # Max pixel size of the longest side of a scaled input image
 __C.TEST.MAX_SIZE = 5000
@@ -120,6 +123,8 @@ __C.TEST.BBOX_REG = True
 __C.TEST.CROP_TOP = False
 __C.TEST.CROP_HEIGHT = 2000
 
+__C.TEST.TEXT_FEATURES_COUNT = 128
+__C.TEST.TEXT_FEATURES_SCALE = 0.125
 
 
 #

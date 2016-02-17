@@ -24,10 +24,11 @@ class eshops(datasets.imdb):
     def __init__(self, image_set, data_path=None):
         datasets.imdb.__init__(self, 'eshops')
         self._image_set = image_set
-        self._data_path = os.path.join(datasets.ROOT_DIR, 'data', 'eshops')
+        self._data_path = os.path.join(datasets.ROOT_DIR, 'data', 'eshops_with_texts')
         self._classes = ('__background__', 'price', 'main_image', 'name')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpeg'
+        self._text_map_ext = '.pkl'
         self._image_index = self._load_image_set_index()
 
         # Default to roidb handler
@@ -48,6 +49,20 @@ class eshops(datasets.imdb):
         image_path = os.path.abspath(os.path.join(self._data_path, 'images', index + self._image_ext))
         assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
+
+    def text_map_path_at(self, i):
+        """
+        Return the absolute path to text map i in the image sequence.
+        """
+        return self.text_map_path_from_index(self._image_index[i])
+
+    def text_map_path_from_index(self, index):
+        """
+        Construct an text_map path from the image's "index" identifier.
+        """
+        text_map_path = os.path.abspath(os.path.join(self._data_path, 'text_maps', index + self._text_map_ext))
+        assert os.path.exists(text_map_path), 'Path does not exist: {}'.format(text_map_path)
+        return text_map_path
 
     def _load_image_set_index(self):
         """
